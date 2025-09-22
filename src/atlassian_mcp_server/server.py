@@ -445,10 +445,13 @@ class AtlassianClient:
         """Create a new Confluence page"""
         cloud_id = await self.get_cloud_id()
         
-        # Get space ID from space key
-        space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/space/{space_key}"
-        space_response = await self.make_request("GET", space_url)
-        space_id = space_response.json().get("id")
+        # Get space ID from space key using v2 API
+        space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
+        space_response = await self.make_request("GET", space_url, params={"keys": space_key})
+        spaces = space_response.json().get("results", [])
+        if not spaces:
+            raise ValueError(f"Space with key '{space_key}' not found")
+        space_id = spaces[0]["id"]
         
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
         
