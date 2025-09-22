@@ -8,8 +8,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned - Service Management Enhancements (0.3.x series)
-- **v0.3.1**: Approval workflows and participant management
 - **v0.3.2**: SLA monitoring, attachments, and feedback systems
+
+## [0.3.1] - 2025-09-23
+
+### Added
+- **Service Management Phase 2** - Approval workflows and participant management
+  - `servicedesk_get_approvals()` - View approval workflows for requests
+  - `servicedesk_approve_request()` - Approve or decline request approvals
+  - `servicedesk_get_participants()` - View request participants
+  - `servicedesk_add_participants()` - Add participants with confirmation prompts
+  - `servicedesk_manage_notifications()` - Subscribe/unsubscribe from notifications
+- Added 6 additional OAuth scopes for approval and participant management
+- Built-in confirmation prompts for participant management to prevent notification spam
+
+### Changed
+- Updated OAuth scopes from 10 to 16 total required scopes
+- Enhanced Service Management documentation with Phase 2 tools
+
+### Security
+- Added explicit confirmation guidance for `servicedesk_add_participants` to prevent unwanted notifications
+- Clear documentation about participant implications (notifications, access, etc.)
 
 ## [0.3.0] - 2025-09-23
 

@@ -82,7 +82,7 @@ After installing the app:
 
 ### 5. Scope Configuration Summary
 
-**Minimal Required (10 scopes):**
+**Minimal Required (16 scopes):**
 ```
 read:jira-work
 read:jira-user  
@@ -92,6 +92,12 @@ read:space:confluence
 write:page:confluence
 read:servicedesk-request
 write:servicedesk-request
+read:request.approval
+write:request.approval
+read:request.participant
+write:request.participant
+read:request.notification
+write:request.notification
 read:me
 offline_access
 ```
@@ -352,6 +358,11 @@ Then use in configurations:
 - `servicedesk_create_request(service_desk_id, request_type_id, summary, description)` - Create new service request
 - `servicedesk_add_comment(issue_key, comment, public=True)` - Add comment to service request
 - `servicedesk_get_request_status(issue_key)` - Get service request status
+- `servicedesk_get_approvals(issue_key)` - Get approval information for request
+- `servicedesk_approve_request(issue_key, approval_id, decision)` - Approve or decline request approval
+- `servicedesk_get_participants(issue_key)` - Get participants for request
+- `servicedesk_add_participants(issue_key, usernames)` - Add participants to request (with confirmation prompts)
+- `servicedesk_manage_notifications(issue_key, subscribe)` - Subscribe/unsubscribe from request notifications
 
 ## Example Usage
 
@@ -418,10 +429,10 @@ python tests/test_functionality.py
 
 This MCP server uses **minimal required scopes** following the principle of least privilege:
 
-### Essential Scopes (10 total)
+### Essential Scopes (16 total)
 - **Jira**: `read:jira-work`, `read:jira-user`, `write:jira-work`
 - **Confluence**: `read:page:confluence`, `read:space:confluence`, `write:page:confluence`
-- **Service Management**: `read:servicedesk-request`, `write:servicedesk-request`
+- **Service Management**: `read:servicedesk-request`, `write:servicedesk-request`, `read:request.approval`, `write:request.approval`, `read:request.participant`, `write:request.participant`, `read:request.notification`, `write:request.notification`
 - **Core**: `read:me`, `offline_access`
 
 ### Optional Scopes (add only if needed)
@@ -539,5 +550,5 @@ These Service Management features will enable AI agents to:
 ### 📅 Implementation Status
 
 **Phase 1 (v0.3.0) - ✅ COMPLETED:** Core request management (create, status, comments)  
-**Phase 2 (v0.3.1) - 🚧 PLANNED:** Approval workflows and participant management  
+**Phase 2 (v0.3.1) - ✅ COMPLETED:** Approval workflows and participant management  
 **Phase 3 (v0.3.2) - 🚧 PLANNED:** SLA monitoring, attachments, and feedback systems

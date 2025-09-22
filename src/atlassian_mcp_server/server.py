@@ -135,6 +135,12 @@ class AtlassianClient:
                 # Service Management - For support context
                 "read:servicedesk-request",          # Read SM tickets
                 "write:servicedesk-request",         # Create/update SM tickets
+                "read:request.approval",             # View approval workflows
+                "write:request.approval",            # Approve/decline requests
+                "read:request.participant",          # View request participants
+                "write:request.participant",         # Manage request participants
+                "read:request.notification",         # Check notification subscriptions
+                "write:request.notification",        # Manage notification preferences
                 
                 # Core
                 "read:me",                           # User profile
@@ -638,6 +644,59 @@ class AtlassianClient:
         
         response = await self.make_request("GET", url)
         return response.json()
+    
+    # Phase 2: Approval workflows and participant management
+    async def servicedesk_get_approvals(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get approval information for a service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("values", [])
+    
+    async def servicedesk_approve_request(self, issue_key: str, approval_id: str, decision: str) -> Dict[str, Any]:
+        """Approve or decline a service desk request approval
+        
+        Args:
+            issue_key: The service desk request key
+            approval_id: The approval ID to respond to
+            decision: 'approve' or 'decline'
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval/{approval_id}"
+        
+        data = {"decision": decision}
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_get_participants(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get participants for a service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("values", [])
+    
+    async def servicedesk_add_participants(self, issue_key: str, usernames: List[str]) -> Dict[str, Any]:
+        """Add participants to a service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
+        
+        data = {"usernames": usernames}
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_manage_notifications(self, issue_key: str, subscribe: bool) -> Dict[str, Any]:
+        """Subscribe or unsubscribe from service desk request notifications"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/notification"
+        
+        if subscribe:
+            response = await self.make_request("PUT", url)
+        else:
+            response = await self.make_request("DELETE", url)
+        
+        return {"success": True, "subscribed": subscribe}
 
 
 # Initialize MCP server
@@ -820,6 +879,69 @@ async def servicedesk_get_request_status(issue_key: str) -> Dict[str, Any]:
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.servicedesk_get_request_status(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_get_approvals(issue_key: str) -> List[Dict[str, Any]]:
+    """Get approval information for a service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_approvals(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_approve_request(issue_key: str, approval_id: str, decision: str) -> Dict[str, Any]:
+    """Approve or decline a service desk request approval.
+    
+    Args:
+        issue_key: The service desk request key
+        approval_id: The approval ID to respond to  
+        decision: 'approve' or 'decline'
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_approve_request(issue_key, approval_id, decision)
+
+
+@mcp.tool()
+async def servicedesk_get_participants(issue_key: str) -> List[Dict[str, Any]]:
+    """Get participants for a service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_participants(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_add_participants(issue_key: str, usernames: List[str]) -> Dict[str, Any]:
+    """Add participants to a service desk request.
+    
+    ⚠️  IMPORTANT: This will add users to the ticket's notification list. They will receive 
+    email notifications for all future updates and can view/comment on the ticket.
+    
+    ALWAYS confirm with the user before adding participants by asking:
+    "This will add [usernames] to receive notifications for ticket [issue_key]. 
+    They'll get emails for updates and can view the ticket. Proceed?"
+    
+    Args:
+        issue_key: The service desk request key
+        usernames: List of usernames to add as participants
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_add_participants(issue_key, usernames)
+
+
+@mcp.tool()
+async def servicedesk_manage_notifications(issue_key: str, subscribe: bool) -> Dict[str, Any]:
+    """Subscribe or unsubscribe from service desk request notifications.
+    
+    Args:
+        issue_key: The service desk request key
+        subscribe: True to subscribe, False to unsubscribe
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_manage_notifications(issue_key, subscribe)
 
 
 async def initialize_client():
