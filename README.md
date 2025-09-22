@@ -438,3 +438,96 @@ The server is built using:
 ## License
 
 MIT License - see LICENSE file for details.
+
+## Planned Features (Future Releases)
+
+### 🎯 Service Management Enhancements
+
+The following Jira Service Management features are planned for future releases to provide comprehensive support ticket management capabilities:
+
+**Reference:** [Jira Service Management REST API Documentation](https://developer.atlassian.com/cloud/jira/service-desk/rest/intro/)
+
+#### Request Management
+- **`servicedesk_create_request()`** - Create service desk requests with custom fields and attachments
+- **`servicedesk_get_request_status()`** - Track request status and workflow transitions  
+- **`servicedesk_transition_request()`** - Move requests through workflow states
+- **`servicedesk_add_request_comment()`** - Add public/internal comments to requests
+
+#### Approval Workflows  
+- **`servicedesk_get_approvals()`** - View pending and completed approvals
+- **`servicedesk_approve_request()`** - Approve or decline approval requests
+- **`servicedesk_get_approval_status()`** - Check approval workflow status
+
+#### Participant & Notification Management
+- **`servicedesk_add_participants()`** - Add users to request conversations
+- **`servicedesk_manage_notifications()`** - Subscribe/unsubscribe from request updates
+- **`servicedesk_get_participants()`** - List all request participants
+
+#### SLA & Performance Tracking
+- **`servicedesk_get_sla_info()`** - Monitor SLA performance and breach status
+- **`servicedesk_get_request_metrics()`** - Track response times and resolution metrics
+
+#### Attachment & File Management
+- **`servicedesk_upload_attachment()`** - Upload files to requests with comments
+- **`servicedesk_get_attachments()`** - List and download request attachments
+
+#### Customer Feedback
+- **`servicedesk_submit_feedback()`** - Submit CSAT ratings and feedback
+- **`servicedesk_get_feedback()`** - Retrieve customer satisfaction data
+
+### 📋 Required OAuth Scopes
+
+To support these Service Management features, the following **additional scopes** will be required:
+
+#### Classic Scopes (Current Approach)
+```
+write:servicedesk-request          # Create and update service requests
+read:request.approval              # View approval workflows  
+write:request.approval             # Approve/decline requests
+read:request.attachment            # Access request attachments
+write:request.attachment           # Upload files to requests
+read:request.participant           # View request participants
+write:request.participant          # Manage request participants
+read:request.notification          # Check notification subscriptions
+write:request.notification         # Manage notification preferences
+read:request.feedback              # View customer feedback
+write:request.feedback             # Submit feedback and ratings
+```
+
+#### Granular Scopes (Alternative)
+```
+read:request:jira-service-management           # Read service requests
+write:request:jira-service-management          # Create/update requests
+read:request.approval:jira-service-management  # View approvals
+write:request.approval:jira-service-management # Process approvals
+read:request.attachment:jira-service-management # Access attachments
+write:request.attachment:jira-service-management # Upload attachments
+read:request.participant:jira-service-management # View participants
+write:request.participant:jira-service-management # Manage participants
+read:request.notification:jira-service-management # View notifications
+write:request.notification:jira-service-management # Manage notifications
+read:request.feedback:jira-service-management  # View feedback
+write:request.feedback:jira-service-management # Submit feedback
+read:request.sla:jira-service-management       # View SLA metrics
+read:request.status:jira-service-management    # View request status
+write:request.status:jira-service-management   # Update request status
+```
+
+### 🎯 Use Cases
+
+These Service Management features will enable AI agents to:
+
+- **Automated Ticket Creation** - Create service requests from conversations with proper categorization
+- **Approval Automation** - Process approval workflows and notify stakeholders  
+- **SLA Monitoring** - Track service level agreements and alert on potential breaches
+- **Customer Communication** - Manage participant lists and notification preferences
+- **Feedback Collection** - Gather and analyze customer satisfaction data
+- **File Management** - Handle attachments and documentation for service requests
+- **Workflow Automation** - Move requests through appropriate workflow states
+- **Performance Analytics** - Monitor team performance and service quality metrics
+
+### 📅 Implementation Priority
+
+**Phase 1 (v0.3.0):** Core request management (create, status, comments, transitions)  
+**Phase 2 (v0.4.0):** Approval workflows and participant management  
+**Phase 3 (v0.5.0):** SLA monitoring, attachments, and feedback systems
