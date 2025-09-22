@@ -444,10 +444,16 @@ class AtlassianClient:
     async def confluence_create_page(self, space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new Confluence page"""
         cloud_id = await self.get_cloud_id()
+        
+        # Get space ID from space key
+        space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/space/{space_key}"
+        space_response = await self.make_request("GET", space_url)
+        space_id = space_response.json().get("id")
+        
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
         
         data = {
-            "spaceId": space_key,
+            "spaceId": space_id,
             "status": "current",
             "title": title,
             "body": {
