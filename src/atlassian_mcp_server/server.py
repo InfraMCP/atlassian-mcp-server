@@ -452,10 +452,10 @@ class AtlassianClient:
     
     # Confluence Methods
     async def confluence_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
-        """Search Confluence content using CQL"""
+        """Search Confluence content using v2 API"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/search"
-        params = {"cql": f"type=page AND title~'{query}'", "limit": limit, "expand": "content.body.storage,content.space"}
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+        params = {"title": query, "limit": limit, "body-format": "storage"}
         
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
