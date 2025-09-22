@@ -353,6 +353,7 @@ Then use in configurations:
 - `confluence_update_page(page_id, title, content, version)` - Update existing Confluence page
 
 ### Service Management Operations
+- `servicedesk_check_availability()` - Check if Jira Service Management is configured
 - `servicedesk_get_requests(service_desk_id=None, limit=50)` - Get service desk requests
 - `servicedesk_get_request(issue_key)` - Get specific service desk request details
 - `servicedesk_create_request(service_desk_id, request_type_id, summary, description)` - Create new service request

@@ -310,11 +310,18 @@ class AtlassianClient:
             if response.status_code == 401:
                 raise ValueError("Authentication required - use authenticate_atlassian tool")
             
+            # Enhanced error handling for Service Management endpoints
+            if response.status_code == 404 and '/servicedeskapi/' in url:
+                if '/request/' in url:
+                    raise ValueError("Service desk request not found. This may be a regular Jira issue (not a service desk request) or the Service Management feature may not be enabled on this Atlassian instance.")
+                else:
+                    raise ValueError("Service desk not found. Jira Service Management may not be configured or enabled on this Atlassian instance.")
+            
             response.raise_for_status()
             return response
         except ValueError as e:
-            # Re-raise authentication errors with debug info
-            raise ValueError(f"{str(e)} [DEBUG: method={method}, url={url}, has_token={bool(self.config.access_token)}]")
+            # Re-raise authentication and service desk errors as-is
+            raise e
         except Exception as e:
             # Add debug info to other errors
             raise Exception(f"{str(e)} [DEBUG: method={method}, url={url}, status={getattr(response, 'status_code', 'no_response')}]")
@@ -708,6 +715,29 @@ class AtlassianClient:
             response = await self.make_request("DELETE", url)
         
         return {"success": True, "subscribed": subscribe}
+    
+    async def servicedesk_check_availability(self) -> Dict[str, Any]:
+        """Check if Jira Service Management is available and configured"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
+        
+        try:
+            response = await self.make_request("GET", url, params={"limit": 1})
+            service_desks = response.json().get("values", [])
+            
+            return {
+                "available": True,
+                "service_desk_count": len(service_desks),
+                "service_desks": service_desks,
+                "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured."
+            }
+        except Exception as e:
+            return {
+                "available": False,
+                "service_desk_count": 0,
+                "service_desks": [],
+                "message": f"Jira Service Management not available: {str(e)}"
+            }
 
 
 # Initialize MCP server
@@ -926,12 +956,16 @@ async def servicedesk_get_participants(issue_key: str) -> List[Dict[str, Any]]:
 async def servicedesk_add_participants(issue_key: str, usernames: List[str]) -> Dict[str, Any]:
     """Add participants to a service desk request.
     
-    ⚠️  IMPORTANT: This will add users to the ticket's notification list. They will receive 
-    email notifications for all future updates and can view/comment on the ticket.
+    🚨 CRITICAL: DO NOT call this tool without explicit user confirmation first!
     
-    ALWAYS confirm with the user before adding participants by asking:
-    "This will add [usernames] to receive notifications for ticket [issue_key]. 
-    They'll get emails for updates and can view the ticket. Proceed?"
+    REQUIRED WORKFLOW:
+    1. ALWAYS ask user: "Adding participants will subscribe them to notifications for ticket {issue_key}. 
+       Users {usernames} will receive emails for all updates and can view/comment on the ticket. 
+       Do you want to proceed? (yes/no)"
+    2. ONLY call this tool if user explicitly confirms with "yes"
+    3. If user says "no" or is unsure, do NOT call this tool
+    
+    This tool adds users to the ticket's notification list and grants them access.
     
     Args:
         issue_key: The service desk request key
@@ -953,6 +987,17 @@ async def servicedesk_manage_notifications(issue_key: str, subscribe: bool) -> D
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.servicedesk_manage_notifications(issue_key, subscribe)
+
+
+@mcp.tool()
+async def servicedesk_check_availability() -> Dict[str, Any]:
+    """Check if Jira Service Management is available and configured on this Atlassian instance.
+    
+    Use this tool first to verify Service Management is set up before using other servicedesk_ tools.
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_check_availability()
 
 
 async def initialize_client():
