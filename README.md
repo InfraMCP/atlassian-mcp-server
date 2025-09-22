@@ -22,12 +22,6 @@ This MCP server is designed to help AI agents assist users with:
 - **Service Requests**: Access service management tickets for support context
 - **Project Coordination**: Search across Jira and Confluence for project information
 
-## Installation
-
-```bash
-pip install -e .
-```
-
 ## OAuth App Setup
 
 ### 1. Create OAuth App
@@ -66,14 +60,28 @@ Navigate to **Permissions** → **User identity API** and add:
 These are typically available by default:
 - `offline_access` - Token refresh capability
 
-### 3. Get Your Credentials
+### 3. Install App to Your Atlassian Site
 
-After configuring scopes:
+After configuring scopes, you need to install the app to your Atlassian site:
+
+1. In your OAuth app, go to **Authorization** tab
+2. Use the **Authorization URL generator** to create an installation URL:
+   - Select your configured scopes
+   - Choose your Atlassian site from the dropdown
+   - Click **Generate URL**
+3. **Visit the generated URL** in your browser to install the app to your site
+4. **Grant permissions** when prompted by Atlassian
+
+**Note**: This step is required before the MCP server can access your Atlassian data. The app must be installed and authorized for your specific site.
+
+### 4. Get Your Credentials
+
+After installing the app:
 1. Go to **Settings** tab in your OAuth app
 2. Copy your **Client ID** and **Client Secret**
 3. Set the environment variables (see Configuration section below)
 
-### 4. Scope Configuration Summary
+### 5. Scope Configuration Summary
 
 **Minimal Required (8 scopes):**
 ```
@@ -95,7 +103,7 @@ write:servicedesk-request      # Only if creating service tickets
 manage:* scopes                # Only for administrative operations
 ```
 
-### 5. Troubleshooting Scopes
+### 6. Troubleshooting Scopes
 
 If you get scope-related errors:
 - **"scope does not match"**: The scope isn't added to your OAuth app in Developer Console
@@ -103,6 +111,42 @@ If you get scope-related errors:
 - **"Unauthorized"**: Check that all required scopes are properly configured
 
 **Note**: After adding new scopes to your OAuth app, you must re-authenticate using the `authenticate_atlassian` tool to get fresh tokens with the new permissions.
+
+## Installation
+
+### Prerequisites
+
+- Python 3.8 or higher
+- pip package manager
+- Access to an Atlassian Cloud site
+- OAuth app configured (see OAuth App Setup above)
+
+### Install from PyPI (Recommended)
+
+```bash
+pip install atlassian-mcp-server
+```
+
+### Install from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/rorymcmahon/atlassian-mcp-server.git
+cd atlassian-mcp-server
+
+# Install in development mode
+pip install -e .
+```
+
+### Verify Installation
+
+```bash
+# Check that the command is available
+atlassian-mcp-server --help
+
+# Or check the Python module
+python -m atlassian_mcp_server --help
+```
 
 ## Configuration
 
