@@ -46,7 +46,7 @@ Navigate to **Permissions** → **Confluence API** and add:
 - `read:confluence-content.all` - Read all Confluence content
 - `search:confluence` - Search Confluence pages
 - `read:confluence-space.summary` - Read space information
-- `write:confluence-content` - Create and update pages *(optional - only if you need page creation)*
+- `write:confluence-content` - Create and update pages
 
 #### Service Management API Scopes
 Navigate to **Permissions** → **Jira Service Management API** and add:
@@ -83,7 +83,7 @@ After installing the app:
 
 ### 5. Scope Configuration Summary
 
-**Minimal Required (8 scopes):**
+**Minimal Required (9 scopes):**
 ```
 read:jira-work
 read:jira-user  
@@ -91,6 +91,7 @@ write:jira-work
 read:confluence-content.all
 search:confluence
 read:confluence-space.summary
+write:confluence-content
 read:servicedesk-request
 read:me
 offline_access
@@ -98,7 +99,6 @@ offline_access
 
 **Optional (add only if needed):**
 ```
-write:confluence-content        # Only if creating/editing pages
 write:servicedesk-request      # Only if creating service tickets
 manage:* scopes                # Only for administrative operations
 ```
@@ -117,14 +117,21 @@ If you get scope-related errors:
 ### Prerequisites
 
 - Python 3.8 or higher
-- pip package manager
+- pip3 package manager
 - Access to an Atlassian Cloud site
 - OAuth app configured (see OAuth App Setup above)
 
 ### Install from PyPI (Recommended)
 
 ```bash
-pip install atlassian-mcp-server
+pip3 install atlassian-mcp-server
+```
+
+### Install from GitHub Repository
+
+```bash
+# Install directly from GitHub repository
+pip3 install git+https://github.com/rorymcmahon/atlassian-mcp-server.git
 ```
 
 ### Install from Source
@@ -135,7 +142,7 @@ git clone https://github.com/rorymcmahon/atlassian-mcp-server.git
 cd atlassian-mcp-server
 
 # Install in development mode
-pip install -e .
+pip3 install -e .
 ```
 
 ### Verify Installation
