@@ -276,24 +276,31 @@ class AtlassianClient:
     
     async def make_request(self, method: str, url: str, **kwargs) -> httpx.Response:
         """Make authenticated request with automatic token refresh"""
-        headers = await self.get_headers()
-        kwargs.setdefault('headers', {}).update(headers)
-        
-        response = await self.client.request(method, url, **kwargs)
-        
-        # Try to refresh token if unauthorized
-        if response.status_code == 401 and self.config.refresh_token:
-            if await self.refresh_access_token():
-                headers = await self.get_headers()
-                kwargs['headers'].update(headers)
-                response = await self.client.request(method, url, **kwargs)
-        
-        # If still unauthorized, need re-authentication
-        if response.status_code == 401:
-            raise ValueError("Authentication required - use authenticate_atlassian tool")
-        
-        response.raise_for_status()
-        return response
+        try:
+            headers = await self.get_headers()
+            kwargs.setdefault('headers', {}).update(headers)
+            
+            response = await self.client.request(method, url, **kwargs)
+            
+            # Try to refresh token if unauthorized
+            if response.status_code == 401 and self.config.refresh_token:
+                if await self.refresh_access_token():
+                    headers = await self.get_headers()
+                    kwargs['headers'].update(headers)
+                    response = await self.client.request(method, url, **kwargs)
+            
+            # If still unauthorized, need re-authentication
+            if response.status_code == 401:
+                raise ValueError("Authentication required - use authenticate_atlassian tool")
+            
+            response.raise_for_status()
+            return response
+        except ValueError as e:
+            # Re-raise authentication errors with debug info
+            raise ValueError(f"{str(e)} [DEBUG: method={method}, url={url}, has_token={bool(self.config.access_token)}]")
+        except Exception as e:
+            # Add debug info to other errors
+            raise Exception(f"{str(e)} [DEBUG: method={method}, url={url}, status={getattr(response, 'status_code', 'no_response')}]")
     
     async def get_cloud_id(self, required_scopes: Optional[List[str]] = None) -> str:
         """Get the cloud ID for the configured site, optionally filtering by required scopes"""
