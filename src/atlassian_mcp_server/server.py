@@ -443,8 +443,8 @@ class AtlassianClient:
     
     async def confluence_create_page(self, space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new Confluence page"""
-        # Try direct site API first (most likely to work)
-        url = f"{self.config.site_url}/wiki/rest/api/content"
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/content"
         
         data = {
             "type": "page",
@@ -466,7 +466,8 @@ class AtlassianClient:
     
     async def confluence_update_page(self, page_id: str, title: str, content: str, version: int) -> Dict[str, Any]:
         """Update an existing Confluence page"""
-        url = f"{self.config.site_url}/wiki/rest/api/content/{page_id}"
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/content/{page_id}"
         
         data = {
             "version": {"number": version + 1},
