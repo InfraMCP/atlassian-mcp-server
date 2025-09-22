@@ -43,10 +43,9 @@ Navigate to **Permissions** → **Jira API** and add:
 
 #### Confluence API Scopes
 Navigate to **Permissions** → **Confluence API** and add:
-- `read:confluence-content.all` - Read all Confluence content
-- `search:confluence` - Search Confluence pages
-- `read:confluence-space.summary` - Read space information
-- `write:confluence-content` - Create and update pages
+- `read:page:confluence` - Read page content (granular scope for v2 API)
+- `read:space:confluence` - Read space information (granular scope for v2 API)  
+- `write:page:confluence` - Create and update pages (granular scope for v2 API)
 
 #### Service Management API Scopes
 Navigate to **Permissions** → **Jira Service Management API** and add:
@@ -88,10 +87,9 @@ After installing the app:
 read:jira-work
 read:jira-user  
 write:jira-work
-read:confluence-content.all
-search:confluence
-read:confluence-space.summary
-write:confluence-content
+read:page:confluence
+read:space:confluence
+write:page:confluence
 read:servicedesk-request
 read:me
 offline_access
@@ -412,14 +410,23 @@ This MCP server uses **minimal required scopes** following the principle of leas
 
 ### Essential Scopes (9 total)
 - **Jira**: `read:jira-work`, `read:jira-user`, `write:jira-work`
-- **Confluence**: `read:confluence-content.all`, `search:confluence`, `read:confluence-space.summary`
+- **Confluence**: `read:page:confluence`, `read:space:confluence`, `write:page:confluence`
 - **Service Management**: `read:servicedesk-request`
 - **Core**: `read:me`, `offline_access`
 
 ### Optional Scopes (add only if needed)
 - `write:servicedesk-request` - Only if creating service management tickets
-- `write:confluence-content` - Only if creating/editing Confluence pages
 - `manage:*` scopes - Only for administrative operations
+
+## Important: Granular Scopes for v2 API
+
+This MCP server uses **granular scopes** for Confluence operations to ensure compatibility with Confluence v2 API endpoints. The v2 API provides better performance and future-proofing compared to the deprecated v1 REST API.
+
+**Granular vs Classic Scopes:**
+- **Granular** (recommended): `read:page:confluence`, `write:page:confluence` - Works with v2 API
+- **Classic** (deprecated): `read:confluence-content.all`, `write:confluence-content` - Only works with v1 API
+
+If you previously configured classic scopes, you'll need to update your OAuth app to use granular scopes and re-authenticate to get fresh tokens.
 
 ## Development
 
