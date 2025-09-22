@@ -124,6 +124,152 @@ python -m atlassian_mcp_server
 python src/atlassian_mcp_server/server.py
 ```
 
+## MCP Client Configuration
+
+### Claude Desktop
+
+Add to your Claude Desktop configuration file:
+
+**macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+**Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "atlassian": {
+      "command": "atlassian-mcp-server",
+      "env": {
+        "ATLASSIAN_SITE_URL": "https://your-domain.atlassian.net",
+        "ATLASSIAN_CLIENT_ID": "your-oauth-client-id",
+        "ATLASSIAN_CLIENT_SECRET": "your-oauth-client-secret"
+      }
+    }
+  }
+}
+```
+
+### Amazon Q Developer CLI
+
+Create an agent configuration file:
+
+**File**: `~/.aws/amazonq/cli-agents/atlassian.json`
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/aws/amazon-q-developer-cli/refs/heads/main/schemas/agent-v1.json",
+  "name": "atlassian",
+  "description": "Atlassian Jira and Confluence integration agent",
+  "prompt": "You are an AI assistant with access to Atlassian Jira and Confluence. Help users manage issues, search content, and document their work.",
+  "mcpServers": {
+    "atlassian-mcp-server": {
+      "command": "atlassian-mcp-server",
+      "args": [],
+      "env": {
+        "ATLASSIAN_SITE_URL": "https://your-domain.atlassian.net",
+        "ATLASSIAN_CLIENT_ID": "your-oauth-client-id",
+        "ATLASSIAN_CLIENT_SECRET": "your-oauth-client-secret"
+      },
+      "autoApprove": ["*"],
+      "disabled": false,
+      "timeout": 60000,
+      "initTimeout": 120000
+    }
+  },
+  "tools": [
+    "@atlassian-mcp-server/*"
+  ],
+  "allowedTools": [
+    "@atlassian-mcp-server/*"
+  ]
+}
+```
+
+Then use: `q chat --agent atlassian`
+
+### VS Code with Continue
+
+Add to your Continue configuration:
+
+**File**: `~/.continue/config.json`
+
+```json
+{
+  "models": [...],
+  "mcpServers": {
+    "atlassian": {
+      "command": "atlassian-mcp-server",
+      "env": {
+        "ATLASSIAN_SITE_URL": "https://your-domain.atlassian.net",
+        "ATLASSIAN_CLIENT_ID": "your-oauth-client-id",
+        "ATLASSIAN_CLIENT_SECRET": "your-oauth-client-secret"
+      }
+    }
+  }
+}
+```
+
+### VS Code with GitHub Copilot Chat
+
+For GitHub Copilot Chat with MCP support, add to workspace settings:
+
+**File**: `.vscode/settings.json`
+
+```json
+{
+  "github.copilot.chat.mcp.servers": {
+    "atlassian": {
+      "command": "atlassian-mcp-server",
+      "env": {
+        "ATLASSIAN_SITE_URL": "https://your-domain.atlassian.net",
+        "ATLASSIAN_CLIENT_ID": "your-oauth-client-id",
+        "ATLASSIAN_CLIENT_SECRET": "your-oauth-client-secret"
+      }
+    }
+  }
+}
+```
+
+### Cline (VS Code Extension)
+
+Add to Cline's MCP configuration:
+
+**File**: `~/.cline/mcp_servers.json`
+
+```json
+{
+  "atlassian": {
+    "command": "atlassian-mcp-server",
+    "env": {
+      "ATLASSIAN_SITE_URL": "https://your-domain.atlassian.net",
+      "ATLASSIAN_CLIENT_ID": "your-oauth-client-id",
+      "ATLASSIAN_CLIENT_SECRET": "your-oauth-client-secret"
+    }
+  }
+}
+```
+
+### Environment Variables Setup
+
+For security, set environment variables instead of hardcoding in config files:
+
+```bash
+# Add to your shell profile (.bashrc, .zshrc, etc.)
+export ATLASSIAN_SITE_URL="https://your-domain.atlassian.net"
+export ATLASSIAN_CLIENT_ID="your-oauth-client-id"
+export ATLASSIAN_CLIENT_SECRET="your-oauth-client-secret"
+```
+
+Then use in configurations:
+```json
+{
+  "env": {
+    "ATLASSIAN_SITE_URL": "${ATLASSIAN_SITE_URL}",
+    "ATLASSIAN_CLIENT_ID": "${ATLASSIAN_CLIENT_ID}",
+    "ATLASSIAN_CLIENT_SECRET": "${ATLASSIAN_CLIENT_SECRET}"
+  }
+}
+```
+
 ## Authentication Flow
 
 1. Start the MCP server
