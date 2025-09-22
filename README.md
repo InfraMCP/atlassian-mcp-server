@@ -82,7 +82,7 @@ After installing the app:
 
 ### 5. Scope Configuration Summary
 
-**Minimal Required (9 scopes):**
+**Minimal Required (10 scopes):**
 ```
 read:jira-work
 read:jira-user  
@@ -91,6 +91,7 @@ read:page:confluence
 read:space:confluence
 write:page:confluence
 read:servicedesk-request
+write:servicedesk-request
 read:me
 offline_access
 ```
@@ -343,6 +344,13 @@ Then use in configurations:
 - `confluence_search(query, limit=10)` - Search Confluence content
 - `confluence_get_page(page_id)` - Get specific page content
 
+### Service Management Operations
+- `servicedesk_get_requests(service_desk_id=None, limit=50)` - Get service desk requests
+- `servicedesk_get_request(issue_key)` - Get specific service desk request details
+- `servicedesk_create_request(service_desk_id, request_type_id, summary, description)` - Create new service request
+- `servicedesk_add_comment(issue_key, comment, public=True)` - Add comment to service request
+- `servicedesk_get_request_status(issue_key)` - Get service request status
+
 ## Example Usage
 
 ```python
@@ -408,10 +416,10 @@ python tests/test_functionality.py
 
 This MCP server uses **minimal required scopes** following the principle of least privilege:
 
-### Essential Scopes (9 total)
+### Essential Scopes (10 total)
 - **Jira**: `read:jira-work`, `read:jira-user`, `write:jira-work`
 - **Confluence**: `read:page:confluence`, `read:space:confluence`, `write:page:confluence`
-- **Service Management**: `read:servicedesk-request`
+- **Service Management**: `read:servicedesk-request`, `write:servicedesk-request`
 - **Core**: `read:me`, `offline_access`
 
 ### Optional Scopes (add only if needed)
@@ -526,8 +534,8 @@ These Service Management features will enable AI agents to:
 - **Workflow Automation** - Move requests through appropriate workflow states
 - **Performance Analytics** - Monitor team performance and service quality metrics
 
-### 📅 Implementation Priority
+### 📅 Implementation Status
 
-**Phase 1 (v0.3.0):** Core request management (create, status, comments, transitions)  
-**Phase 2 (v0.4.0):** Approval workflows and participant management  
-**Phase 3 (v0.5.0):** SLA monitoring, attachments, and feedback systems
+**Phase 1 (v0.3.0) - ✅ COMPLETED:** Core request management (create, status, comments)  
+**Phase 2 (v0.4.0) - 🚧 PLANNED:** Approval workflows and participant management  
+**Phase 3 (v0.5.0) - 🚧 PLANNED:** SLA monitoring, attachments, and feedback systems

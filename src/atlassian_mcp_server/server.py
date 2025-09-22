@@ -134,6 +134,7 @@ class AtlassianClient:
                 
                 # Service Management - For support context
                 "read:servicedesk-request",          # Read SM tickets
+                "write:servicedesk-request",         # Create/update SM tickets
                 
                 # Core
                 "read:me",                           # User profile
@@ -577,6 +578,66 @@ class AtlassianClient:
         
         response = await self.make_request("PUT", url, json=data)
         return response.json()
+    
+    # Service Management Methods
+    async def servicedesk_get_requests(self, service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get service desk requests"""
+        cloud_id = await self.get_cloud_id()
+        
+        if service_desk_id:
+            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/request"
+        else:
+            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
+        
+        params = {"limit": limit}
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("values", [])
+    
+    async def servicedesk_get_request(self, issue_key: str) -> Dict[str, Any]:
+        """Get specific service desk request details"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
+    
+    async def servicedesk_create_request(self, service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
+        """Create a new service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/request"
+        
+        data = {
+            "serviceDeskId": service_desk_id,
+            "requestTypeId": request_type_id,
+            "requestFieldValues": {
+                "summary": summary,
+                "description": description
+            }
+        }
+        
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_add_comment(self, issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
+        """Add comment to service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
+        
+        data = {
+            "body": comment,
+            "public": public
+        }
+        
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_get_request_status(self, issue_key: str) -> Dict[str, Any]:
+        """Get service desk request status"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/status"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
 
 
 # Initialize MCP server
@@ -701,6 +762,64 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.confluence_update_page(page_id, title, content, version)
+
+
+@mcp.tool()
+async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """Get service desk requests.
+    
+    Args:
+        service_desk_id: Optional service desk ID to filter requests
+        limit: Maximum number of requests to return (default: 50)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_requests(service_desk_id, limit)
+
+
+@mcp.tool()
+async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
+    """Get detailed information about a specific service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_create_request(service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
+    """Create a new service desk request.
+    
+    Args:
+        service_desk_id: ID of the service desk
+        request_type_id: ID of the request type
+        summary: Brief title of the request
+        description: Detailed description of the request
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_create_request(service_desk_id, request_type_id, summary, description)
+
+
+@mcp.tool()
+async def servicedesk_add_comment(issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
+    """Add a comment to a service desk request.
+    
+    Args:
+        issue_key: The service desk request key
+        comment: Comment text to add
+        public: Whether the comment is public (default: True) or internal
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_add_comment(issue_key, comment, public)
+
+
+@mcp.tool()
+async def servicedesk_get_request_status(issue_key: str) -> Dict[str, Any]:
+    """Get the current status of a service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_status(issue_key)
 
 
 async def initialize_client():
