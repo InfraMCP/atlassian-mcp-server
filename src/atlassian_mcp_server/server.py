@@ -520,8 +520,24 @@ class AtlassianClient:
             
             # Debug the actual API call
             try:
+                # Check if we have access token before making request
+                headers_debug = await self.get_headers()
                 response = await self.make_request("POST", url, json=data)
                 return response.json()
+            except ValueError as auth_error:
+                return {
+                    "error": f"Authentication error: {str(auth_error)}",
+                    "debug_info": {
+                        "cloud_id_selection": cloud_id_debug,
+                        "api_url": url,
+                        "request_data": data,
+                        "space_id": space_id,
+                        "access_token_present": bool(self.config.access_token),
+                        "access_token_length": len(self.config.access_token) if self.config.access_token else 0,
+                        "refresh_token_present": bool(self.config.refresh_token),
+                        "site_url": self.config.site_url
+                    }
+                }
             except Exception as api_error:
                 return {
                     "error": f"API call failed: {str(api_error)}",
