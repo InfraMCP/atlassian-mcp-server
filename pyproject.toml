@@ -5,11 +5,27 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "atlassian-mcp-server"
 version = "0.1.0"
-description = "MCP server for Atlassian Cloud (Confluence & Jira) with OAuth authentication"
+description = "MCP server for Atlassian Cloud (Confluence & Jira) with seamless OAuth 2.0 authentication"
 authors = [{name = "Rory McMahon", email = "rory.mcmahon@vocus.com.au"}]
 license = {text = "MIT"}
 readme = "README.md"
 requires-python = ">=3.8"
+keywords = ["mcp", "atlassian", "jira", "confluence", "oauth", "ai", "assistant"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
+    "Topic :: Office/Business",
+]
 dependencies = [
     "mcp>=1.0.0",
     "httpx>=0.25.0",
@@ -27,6 +43,8 @@ dev = [
 [project.urls]
 Homepage = "https://github.com/rorymcmahon/atlassian-mcp-server"
 Repository = "https://github.com/rorymcmahon/atlassian-mcp-server"
+Issues = "https://github.com/rorymcmahon/atlassian-mcp-server/issues"
+Documentation = "https://github.com/rorymcmahon/atlassian-mcp-server#readme"
 
 [project.scripts]
 atlassian-mcp-server = "atlassian_mcp_server:main"
