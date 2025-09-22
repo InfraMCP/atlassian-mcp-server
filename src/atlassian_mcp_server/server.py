@@ -445,6 +445,11 @@ class AtlassianClient:
         """Create a new Confluence page"""
         cloud_id = await self.get_cloud_id()
         
+        # Debug: Check accessible resources and scopes
+        resources_url = "https://api.atlassian.com/oauth/token/accessible-resources"
+        resources_response = await self.make_request("GET", resources_url)
+        print(f"DEBUG: Available scopes: {resources_response.json()}")
+        
         # Get space ID from space key using v2 API
         space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
         space_response = await self.make_request("GET", space_url, params={"keys": space_key})
