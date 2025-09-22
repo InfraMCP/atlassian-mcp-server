@@ -343,6 +343,8 @@ Then use in configurations:
 ### Confluence Operations
 - `confluence_search(query, limit=10)` - Search Confluence content
 - `confluence_get_page(page_id)` - Get specific page content
+- `confluence_create_page(space_key, title, content, parent_id=None)` - Create new Confluence page
+- `confluence_update_page(page_id, title, content, version)` - Update existing Confluence page
 
 ### Service Management Operations
 - `servicedesk_get_requests(service_desk_id=None, limit=50)` - Get service desk requests
