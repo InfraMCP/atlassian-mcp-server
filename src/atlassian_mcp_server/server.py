@@ -518,8 +518,21 @@ class AtlassianClient:
             if parent_id:
                 data["parentId"] = parent_id
             
-            response = await self.make_request("POST", url, json=data)
-            return response.json()
+            # Debug the actual API call
+            try:
+                response = await self.make_request("POST", url, json=data)
+                return response.json()
+            except Exception as api_error:
+                return {
+                    "error": f"API call failed: {str(api_error)}",
+                    "debug_info": {
+                        "cloud_id_selection": cloud_id_debug,
+                        "api_url": url,
+                        "request_data": data,
+                        "space_id": space_id,
+                        "headers_used": await self.get_headers() if hasattr(self, 'get_headers') else "Unable to get headers"
+                    }
+                }
             
         except Exception as e:
             # Return debug info with the error
