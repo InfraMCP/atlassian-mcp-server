@@ -493,22 +493,9 @@ class AtlassianClient:
                 "selected_cloud_id": cloud_id
             }
             
-            # Get space ID from space key using v2 API
-            space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
-            space_response = await self.make_request("GET", space_url, params={"keys": space_key})
-            spaces = space_response.json().get("results", [])
-            if not spaces:
-                return {
-                    "error": f"Space with key '{space_key}' not found",
-                    "debug_info": {
-                        "cloud_id": cloud_id,
-                        "cloud_id_selection": cloud_id_debug,
-                        "accessible_resources": resources_data,
-                        "space_lookup_url": space_url,
-                        "space_response": space_response.json()
-                    }
-                }
-            space_id = spaces[0]["id"]
+            # Use space key directly instead of looking up space ID
+            # The v2 API should accept space key in spaceId field
+            space_id = space_key
             
             url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
             
