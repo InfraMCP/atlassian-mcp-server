@@ -479,6 +479,13 @@ class AtlassianClient:
             resources_response = await self.make_request("GET", resources_url)
             resources_data = resources_response.json()
             
+            # Debug info for cloud ID selection
+            cloud_id_debug = {
+                "requested_scopes": ["write:confluence-content"],
+                "available_resources": resources_data,
+                "selected_cloud_id": cloud_id
+            }
+            
             # Get space ID from space key using v2 API
             space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
             space_response = await self.make_request("GET", space_url, params={"keys": space_key})
@@ -488,6 +495,7 @@ class AtlassianClient:
                     "error": f"Space with key '{space_key}' not found",
                     "debug_info": {
                         "cloud_id": cloud_id,
+                        "cloud_id_selection": cloud_id_debug,
                         "accessible_resources": resources_data,
                         "space_lookup_url": space_url,
                         "space_response": space_response.json()
@@ -520,6 +528,7 @@ class AtlassianClient:
                 "debug_info": {
                     "site_url": self.config.site_url,
                     "has_access_token": bool(self.config.access_token),
+                    "cloud_id_selection": cloud_id_debug if 'cloud_id_debug' in locals() else "Failed before cloud ID selection",
                     "accessible_resources": resources_data if 'resources_data' in locals() else "Failed to retrieve",
                     "cloud_id": cloud_id if 'cloud_id' in locals() else "Failed to retrieve"
                 }
