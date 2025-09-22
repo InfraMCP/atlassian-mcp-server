@@ -464,16 +464,11 @@ class AtlassianClient:
     async def confluence_get_page(self, page_id: str) -> Dict[str, Any]:
         """Get Confluence page content"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/rest/api/search"
-        params = {"cql": f"type=page AND id={page_id}", "expand": "content.body.storage,content.space,content.version"}
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}"
+        params = {"body-format": "storage"}
         
         response = await self.make_request("GET", url, params=params)
-        results = response.json().get("results", [])
-        
-        if results:
-            return results[0].get("content", {})
-        else:
-            raise ValueError(f"Page {page_id} not found")
+        return response.json()
     
     async def confluence_create_page(self, space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
         """Create a new Confluence page"""
