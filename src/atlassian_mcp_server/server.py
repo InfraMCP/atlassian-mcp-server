@@ -57,15 +57,26 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
             }
             
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-type', 'text/html; charset=utf-8')
             self.end_headers()
             
             if self.server.callback_data['error']:
-                html = f"""<html><body><h1>❌ Authorization Failed</h1><p>Error: {self.server.callback_data['error']}</p></body></html>"""
+                html = f"""<html>
+<head><title>Authorization Failed</title></head>
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+    <h1 style="color: #d73527;">Authorization Failed</h1>
+    <p>Error: {self.server.callback_data['error']}</p>
+</body></html>"""
             else:
-                html = """<html><body><h1>✅ Authorization Successful!</h1><p>You can close this window.</p><script>setTimeout(() => window.close(), 3000);</script></body></html>"""
+                html = """<html>
+<head><title>Authorization Successful</title></head>
+<body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
+    <h1 style="color: #36b37e;">Authorization Successful!</h1>
+    <p>You can close this window.</p>
+    <script>setTimeout(() => window.close(), 3000);</script>
+</body></html>"""
             
-            self.wfile.write(html.encode())
+            self.wfile.write(html.encode('utf-8'))
             self.server.callback_received = True
         else:
             self.send_error(404)
