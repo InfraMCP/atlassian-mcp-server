@@ -30,27 +30,79 @@ pip install -e .
 
 ## OAuth App Setup
 
-1. Go to [Atlassian Developer Console](https://developer.atlassian.com/console/myapps/)
-2. Create a new OAuth 2.0 app
-3. Set redirect URI to `http://localhost:8080/callback`
-4. Add the following **minimal required scopes**:
+### 1. Create OAuth App
 
-### Jira API Scopes
+1. Go to [Atlassian Developer Console](https://developer.atlassian.com/console/myapps/)
+2. Click **Create** → **OAuth 2.0 integration**
+3. Enter your app name and accept the terms
+4. Set **Callback URL** to: `http://localhost:8080/callback`
+
+### 2. Configure Required Scopes
+
+**IMPORTANT**: You must add these exact scopes to your OAuth app before the MCP server can function properly.
+
+#### Jira API Scopes
+Navigate to **Permissions** → **Jira API** and add:
 - `read:jira-work` - Read issues, projects, and search
-- `read:jira-user` - Read user information
+- `read:jira-user` - Read user information  
 - `write:jira-work` - Create and update issues
 
-### Confluence API Scopes  
+#### Confluence API Scopes
+Navigate to **Permissions** → **Confluence API** and add:
 - `read:confluence-content.all` - Read all Confluence content
 - `search:confluence` - Search Confluence pages
 - `read:confluence-space.summary` - Read space information
+- `write:confluence-content` - Create and update pages *(optional - only if you need page creation)*
 
-### Service Management API Scopes
+#### Service Management API Scopes
+Navigate to **Permissions** → **Jira Service Management API** and add:
 - `read:servicedesk-request` - Read service management tickets
 
-### Core Scopes
+#### User Identity API Scopes
+Navigate to **Permissions** → **User identity API** and add:
 - `read:me` - User profile information
+
+#### Core Scopes
+These are typically available by default:
 - `offline_access` - Token refresh capability
+
+### 3. Get Your Credentials
+
+After configuring scopes:
+1. Go to **Settings** tab in your OAuth app
+2. Copy your **Client ID** and **Client Secret**
+3. Set the environment variables (see Configuration section below)
+
+### 4. Scope Configuration Summary
+
+**Minimal Required (8 scopes):**
+```
+read:jira-work
+read:jira-user  
+write:jira-work
+read:confluence-content.all
+search:confluence
+read:confluence-space.summary
+read:servicedesk-request
+read:me
+offline_access
+```
+
+**Optional (add only if needed):**
+```
+write:confluence-content        # Only if creating/editing pages
+write:servicedesk-request      # Only if creating service tickets
+manage:* scopes                # Only for administrative operations
+```
+
+### 5. Troubleshooting Scopes
+
+If you get scope-related errors:
+- **"scope does not match"**: The scope isn't added to your OAuth app in Developer Console
+- **"Current user not permitted"**: User lacks product-level permissions (contact your Atlassian admin)
+- **"Unauthorized"**: Check that all required scopes are properly configured
+
+**Note**: After adding new scopes to your OAuth app, you must re-authenticate using the `authenticate_atlassian` tool to get fresh tokens with the new permissions.
 
 ## Configuration
 

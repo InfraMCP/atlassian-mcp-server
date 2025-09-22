@@ -117,6 +117,7 @@ class AtlassianClient:
                 "read:confluence-content.all",       # Read all content
                 "search:confluence",                 # Search functionality
                 "read:confluence-space.summary",     # Space info
+                "write:confluence-content",          # Create/update pages
                 
                 # Service Management - For support context
                 "read:servicedesk-request",          # Read SM tickets
@@ -439,6 +440,48 @@ class AtlassianClient:
             return results[0].get("content", {})
         else:
             raise ValueError(f"Page {page_id} not found")
+    
+    async def confluence_create_page(self, space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
+        """Create a new Confluence page"""
+        # Try direct site API first (most likely to work)
+        url = f"{self.config.site_url}/wiki/rest/api/content"
+        
+        data = {
+            "type": "page",
+            "title": title,
+            "space": {"key": space_key},
+            "body": {
+                "storage": {
+                    "value": content,
+                    "representation": "storage"
+                }
+            }
+        }
+        
+        if parent_id:
+            data["ancestors"] = [{"id": parent_id}]
+        
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def confluence_update_page(self, page_id: str, title: str, content: str, version: int) -> Dict[str, Any]:
+        """Update an existing Confluence page"""
+        url = f"{self.config.site_url}/wiki/rest/api/content/{page_id}"
+        
+        data = {
+            "version": {"number": version + 1},
+            "title": title,
+            "type": "page",
+            "body": {
+                "storage": {
+                    "value": content,
+                    "representation": "storage"
+                }
+            }
+        }
+        
+        response = await self.make_request("PUT", url, json=data)
+        return response.json()
 
 
 # Initialize MCP server
@@ -533,6 +576,36 @@ async def confluence_get_page(page_id: str) -> Dict[str, Any]:
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.confluence_get_page(page_id)
+
+
+@mcp.tool()
+async def confluence_create_page(space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
+    """Create a new Confluence page.
+    
+    Args:
+        space_key: The space key where to create the page (e.g., 'PROJ', 'DOC')
+        title: Title of the new page
+        content: HTML content of the page (use Confluence storage format)
+        parent_id: Optional parent page ID to create as a child page
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_create_page(space_key, title, content, parent_id)
+
+
+@mcp.tool()
+async def confluence_update_page(page_id: str, title: str, content: str, version: int) -> Dict[str, Any]:
+    """Update an existing Confluence page.
+    
+    Args:
+        page_id: ID of the page to update
+        title: New title for the page
+        content: New HTML content (use Confluence storage format)
+        version: Current version number of the page (get from confluence_get_page)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_update_page(page_id, title, content, version)
 
 
 async def initialize_client():
