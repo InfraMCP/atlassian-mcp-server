@@ -512,7 +512,8 @@ class AtlassianClient:
                 "body": {
                     "representation": "storage",
                     "value": content
-                }
+                },
+                "subtype": "live"
             }
             
             if parent_id:
