@@ -127,11 +127,10 @@ class AtlassianClient:
                 "read:jira-user",                    # Read user info
                 "write:jira-work",                   # Create/update issues
                 
-                # Confluence - Essential for content operations  
-                "read:confluence-content.all",       # Read all content
-                "search:confluence",                 # Search functionality
-                "read:confluence-space.summary",     # Space info
-                "write:confluence-content",          # Create/update pages
+                # Confluence - Granular scopes for v2 API compatibility
+                "read:page:confluence",              # Read pages (replaces read:confluence-content.all)
+                "read:space:confluence",             # Read space info (replaces read:confluence-space.summary)
+                "write:page:confluence",             # Create/update pages (replaces write:confluence-content)
                 
                 # Service Management - For support context
                 "read:servicedesk-request",          # Read SM tickets
@@ -560,7 +559,7 @@ class AtlassianClient:
     async def confluence_update_page(self, page_id: str, title: str, content: str, version: int) -> Dict[str, Any]:
         """Update an existing Confluence page"""
         # Get cloud ID for resource with Confluence write scope
-        cloud_id = await self.get_cloud_id(required_scopes=["write:confluence-content"])
+        cloud_id = await self.get_cloud_id(required_scopes=["write:page:confluence"])
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}"
         
         data = {
