@@ -4,8 +4,10 @@ import asyncio
 import base64
 import hashlib
 import json
+import logging
 import os
 import secrets
+import sys
 import threading
 import time
 import webbrowser
@@ -13,6 +15,10 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
+
+# Configure logging to stderr to avoid interfering with MCP protocol
+logging.basicConfig(stream=sys.stderr, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
 
 import httpx
 from mcp.server.fastmcp import FastMCP
@@ -287,8 +293,13 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         resources = response.json()
         
+        logger.debug(f"Accessible resources: {resources}")
+        logger.debug(f"Looking for site: {self.config.site_url}")
+        
         for resource in resources:
+            logger.debug(f"Checking resource: {resource}")
             if resource["url"] == self.config.site_url:
+                logger.debug(f"Found matching site, cloud_id: {resource['id']}")
                 return resource["id"]
         
         raise ValueError(f"Site {self.config.site_url} not found in accessible resources")
@@ -448,7 +459,7 @@ class AtlassianClient:
         # Debug: Check accessible resources and scopes
         resources_url = "https://api.atlassian.com/oauth/token/accessible-resources"
         resources_response = await self.make_request("GET", resources_url)
-        print(f"DEBUG: Available scopes: {resources_response.json()}")
+        logger.debug(f"Available scopes: {resources_response.json()}")
         
         # Get space ID from space key using v2 API
         space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
