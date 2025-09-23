@@ -7,14 +7,32 @@ This directory contains comprehensive API documentation for all Atlassian Cloud 
 ```
 docs/
 ├── README.md                           # This file
-├── CONFLUENCE_GRANULAR_SCOPES.md       # Confluence OAuth scope reference
-├── JIRA_GRANULAR_SCOPES.md            # Jira OAuth scope reference
 ├── api-specs/                          # OpenAPI specifications
 │   ├── confluence-v2-swagger.json      # Confluence API v2 spec
 │   ├── jira-platform-swagger.json      # Jira Platform API v3 spec
 │   └── jira-service-desk-swagger.v3.json # Jira Service Management API spec
-├── confluence/                         # Confluence API documentation
-│   └── pages-api.md                    # Pages API (search, CRUD operations)
+├── confluence/                         # Confluence API v2 documentation
+│   ├── ancestors-api.md                # Content hierarchy navigation
+│   ├── attachment-api.md               # File attachments management
+│   ├── blog-post-api.md               # Blog posts lifecycle
+│   ├── comment-api.md                 # Comments (footer & inline)
+│   ├── content-api.md                 # Content type utilities
+│   ├── content-properties-api.md      # Custom metadata management
+│   ├── custom-content-api.md          # Custom content types
+│   ├── database-api.md                # Structured data tables
+│   ├── folder-api.md                  # Content organization
+│   ├── label-api.md                   # Content labeling/tagging
+│   ├── like-api.md                    # Social engagement
+│   ├── operation-api.md               # Permission discovery
+│   ├── page-api.md                    # Core page management
+│   ├── smart-link-api.md              # External content embedding
+│   ├── space-api.md                   # Space management
+│   ├── space-permissions-api.md       # Access control auditing
+│   ├── space-properties-api.md        # Space configuration
+│   ├── space-roles-api.md             # Role-based permissions (EAP)
+│   ├── task-api.md                    # Task management
+│   ├── version-api.md                 # Content version history
+│   └── whiteboard-api.md              # Visual collaboration
 ├── jira/                              # Jira Platform API documentation
 │   └── issues-api.md                   # Issues API (search, CRUD, comments)
 └── service-desk/                      # Jira Service Management API documentation
@@ -30,13 +48,28 @@ docs/
 
 ## API Coverage
 
-### Confluence API v2
-- **Pages API** - Complete page lifecycle management
-  - Search pages with filtering and pagination
-  - Get individual page details with content
-  - Create new pages with rich content
-  - Update existing pages with version control
-  - Space integration for organization
+### Confluence API v2 (Complete Coverage)
+- **Page API** - Core page lifecycle management with full CRUD operations
+- **Blog Post API** - Blog post creation and management
+- **Comment API** - Footer and inline comments with threading
+- **Attachment API** - File upload, download, and management
+- **Space API** - Space discovery, creation (EAP), and management
+- **Content Properties API** - Custom metadata for all content types
+- **Space Properties API** - Space-level configuration and metadata
+- **Label API** - Content labeling and categorization
+- **Like API** - Social engagement and interaction tracking
+- **Task API** - Task management within content
+- **Version API** - Complete version history and change tracking
+- **Operation API** - Permission discovery and capability checking
+- **Ancestors API** - Content hierarchy navigation
+- **Custom Content API** - Extensible content types
+- **Database API** - Structured data tables
+- **Folder API** - Content organization and structure
+- **Smart Link API** - External content embedding
+- **Whiteboard API** - Visual collaboration tools
+- **Space Permissions API** - Access control auditing
+- **Space Roles API** - Role-based permissions (EAP)
+- **Content API** - Content type utilities
 
 ### Jira Platform API v3
 - **Issues API** - Comprehensive issue management
@@ -47,38 +80,193 @@ docs/
   - Add comments with rich formatting
   - Project integration for context
 
-### Jira Service Management API
-- **Assets API** - Assets workspace access
-- **Customer API** - Customer lifecycle management
-- **Info API** - Instance information retrieval
-- **Knowledgebase API** - Article search and access
-- **Organization API** - Organization management with properties
-- **Request API** - Complete service request lifecycle
-- **Requesttype API** - Request type configuration and fields
-- **Servicedesk API** - Service desk discovery and details
+### Jira Service Management API (Complete Coverage)
+- **Assets API** - Assets workspace access and management
+- **Customer API** - Customer lifecycle and profile management
+- **Info API** - Instance information and configuration
+- **Knowledgebase API** - Knowledge base article search and access
+- **Organization API** - Organization management with custom properties
+- **Request API** - Complete service request lifecycle management
+- **Requesttype API** - Request type configuration and custom fields
+- **Servicedesk API** - Service desk discovery and configuration
+
+## MCP Server Enhancement Opportunities
+
+Based on the comprehensive API documentation, here are suggested enhancements to add valuable features to the Atlassian MCP Server:
+
+### High-Priority Enhancements
+
+#### 1. Enhanced Content Management
+**APIs to Implement:**
+- **Attachment API** - Enable file upload/download capabilities
+- **Content Properties API** - Store custom metadata and configuration
+- **Version API** - Access content history and track changes
+- **Label API** - Implement content tagging and categorization
+
+**Value:** Provides complete content lifecycle management with file handling, metadata, and organization.
+
+#### 2. Advanced Search and Discovery
+**APIs to Implement:**
+- **Space API** - Discover and filter spaces by type and criteria
+- **Ancestors API** - Navigate content hierarchies and relationships
+- **Operation API** - Check user permissions before operations
+
+**Value:** Enables intelligent content discovery and permission-aware operations.
+
+#### 3. Collaboration Features
+**APIs to Implement:**
+- **Comment API** - Add threaded discussions to content
+- **Like API** - Track engagement and social interactions
+- **Task API** - Manage actionable items within content
+
+**Value:** Enhances collaborative workflows and team engagement tracking.
+
+#### 4. Service Management Integration
+**APIs to Implement:**
+- **Service Desk Request API** - Create and manage support tickets
+- **Customer API** - Manage customer profiles and organizations
+- **Knowledge Base API** - Access support documentation
+
+**Value:** Provides comprehensive service management capabilities for support workflows.
+
+### Medium-Priority Enhancements
+
+#### 5. Advanced Organization
+**APIs to Implement:**
+- **Folder API** - Organize content in hierarchical structures
+- **Database API** - Manage structured data tables
+- **Custom Content API** - Support extensible content types
+
+**Value:** Enables advanced content organization and structured data management.
+
+#### 6. Visual Collaboration
+**APIs to Implement:**
+- **Whiteboard API** - Create and manage visual collaboration spaces
+- **Smart Link API** - Embed external content and resources
+
+**Value:** Supports modern visual collaboration and external content integration.
+
+#### 7. Advanced Permissions
+**APIs to Implement:**
+- **Space Permissions API** - Audit and analyze access control
+- **Space Roles API** - Implement role-based permission management (EAP)
+
+**Value:** Provides enterprise-grade permission management and compliance capabilities.
+
+### Implementation Priority Matrix
+
+| Feature Category | Business Value | Implementation Complexity | Priority |
+|------------------|----------------|---------------------------|----------|
+| File Attachments | High | Medium | 🔴 High |
+| Content Properties | High | Low | 🔴 High |
+| Comments & Tasks | High | Medium | 🔴 High |
+| Service Requests | High | Medium | 🔴 High |
+| Advanced Search | Medium | Low | 🟡 Medium |
+| Visual Collaboration | Medium | High | 🟡 Medium |
+| Permission Management | Low | High | 🟢 Low |
+
+### Suggested Implementation Phases
+
+#### Phase 1: Core Content Enhancement
+- Attachment API for file management
+- Content Properties API for metadata
+- Version API for change tracking
+- Comment API for collaboration
+
+#### Phase 2: Service Management
+- Service Desk Request API
+- Customer API
+- Knowledge Base API
+- Task API integration
+
+#### Phase 3: Advanced Features
+- Whiteboard API for visual collaboration
+- Database API for structured data
+- Advanced permission management
+- Custom content types
+
+### OAuth Scope Requirements
+
+#### Additional Scopes Needed:
+```
+# Confluence Enhancements
+read:attachment:confluence          # File access
+write:attachment:confluence         # File upload
+read:comment:confluence            # Comment access
+write:comment:confluence           # Comment creation
+read:task:confluence              # Task management
+write:task:confluence             # Task updates
+read:label:confluence             # Label access
+read:whiteboard:confluence        # Whiteboard access
+write:whiteboard:confluence       # Whiteboard creation
+
+# Service Management
+read:servicedesk-request          # Request access
+write:servicedesk-request         # Request creation
+manage:servicedesk-customer       # Customer management
+```
 
 ## OAuth 2.0 Scopes
 
-### Granular Scopes (Recommended)
-The MCP Server uses granular OAuth scopes for enhanced security and compliance:
+### Current Minimal Scopes (9 total)
+The MCP Server currently uses minimal OAuth scopes for enhanced security:
 
-#### Confluence
+#### Confluence (3 scopes)
 - `read:page:confluence` - Read page content and metadata
-- `read:space:confluence` - Read space information
+- `read:space:confluence` - Read space information  
 - `write:page:confluence` - Create and update pages
 
-#### Jira Platform
+#### Jira Platform (3 scopes)
 - `read:jira-work` - Read issues, projects, and search
 - `read:jira-user` - Read user information
 - `write:jira-work` - Create and update issues
 
-#### Jira Service Management
+#### Service Management (1 scope)
 - `read:servicedesk-request` - Read service desk requests
-- `write:servicedesk-request` - Create and update requests
-- `manage:servicedesk-customer` - Manage customers and organizations
 
-### Classic Scopes (Legacy)
-Legacy scopes are still supported but granular scopes are recommended for new implementations.
+#### Core (2 scopes)
+- `read:me` - User profile information
+- `offline_access` - Token refresh capability
+
+### Enhanced Scopes for Full API Coverage
+To support all documented APIs, additional scopes would be needed:
+
+#### Confluence Enhancements
+```
+read:attachment:confluence          # File attachments
+write:attachment:confluence         # File upload
+read:comment:confluence            # Comments access
+write:comment:confluence           # Comment creation
+delete:comment:confluence          # Comment deletion
+read:task:confluence              # Task management
+write:task:confluence             # Task updates
+read:label:confluence             # Content labels
+read:whiteboard:confluence        # Whiteboards
+write:whiteboard:confluence       # Whiteboard creation
+delete:whiteboard:confluence      # Whiteboard deletion
+read:custom-content:confluence    # Custom content
+write:custom-content:confluence   # Custom content creation
+delete:custom-content:confluence  # Custom content deletion
+read:database:confluence          # Database access
+write:database:confluence         # Database creation
+delete:database:confluence        # Database deletion
+read:folder:confluence            # Folder access
+write:folder:confluence           # Folder creation
+delete:folder:confluence          # Folder deletion
+read:embed:confluence             # Smart links
+write:embed:confluence            # Smart link creation
+delete:embed:confluence           # Smart link deletion
+read:space.permission:confluence  # Permission auditing
+write:space.permission:confluence # Permission management
+write:space:confluence            # Space creation (EAP)
+write:configuration:confluence    # Role management (admin)
+```
+
+#### Service Management Enhancements
+```
+write:servicedesk-request         # Request creation
+manage:servicedesk-customer       # Customer management
+```
 
 ## Implementation Notes
 
@@ -108,7 +296,7 @@ Legacy scopes are still supported but granular scopes are recommended for new im
 
 ## Usage Examples
 
-### Confluence Operations
+### Current Confluence Operations
 ```python
 # Search for pages
 pages = await confluence_search("API documentation", limit=10)
@@ -129,6 +317,44 @@ updated_page = await confluence_update_page(
     title="Updated Title",
     content="<p>Updated content</p>",
     version=2
+)
+```
+
+### Potential Enhanced Operations
+```python
+# File attachment management
+attachment = await confluence_upload_attachment(
+    page_id="123456",
+    file_path="./document.pdf",
+    comment="Updated specification document"
+)
+
+# Content collaboration
+comment = await confluence_add_comment(
+    page_id="123456",
+    comment="Great documentation! One suggestion..."
+)
+
+# Task management
+task = await confluence_create_task(
+    page_id="123456",
+    assignee="user@company.com",
+    description="Review and update API examples",
+    due_date="2024-02-15"
+)
+
+# Content organization
+await confluence_add_labels(
+    page_id="123456",
+    labels=["api-docs", "v2", "reviewed"]
+)
+
+# Service management integration
+ticket = await servicedesk_create_request(
+    service_desk_id="1",
+    request_type_id="10",
+    summary="API documentation update needed",
+    description="Please update the authentication section"
 )
 ```
 
