@@ -715,7 +715,27 @@ class AtlassianClient:
         
         return {"success": True, "subscribed": subscribe}
     
-    async def servicedesk_check_availability(self) -> Dict[str, Any]:
+    async def servicedesk_debug_request(self, endpoint: str) -> Dict[str, Any]:
+        """Debug Service Management API requests to see actual responses"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/{endpoint}"
+        
+        try:
+            response = await self.client.request("GET", url, headers=await self.get_headers())
+            return {
+                "success": True,
+                "status_code": response.status_code,
+                "url": url,
+                "response_text": response.text[:500],  # First 500 chars
+                "headers": dict(response.headers)
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "url": url,
+                "status_code": getattr(e, 'response', {}).get('status_code', 'unknown')
+            }
         """Check if Jira Service Management is available and configured"""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
@@ -987,6 +1007,18 @@ async def servicedesk_manage_notifications(issue_key: str, subscribe: bool) -> D
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.servicedesk_manage_notifications(issue_key, subscribe)
+
+
+@mcp.tool()
+async def servicedesk_debug_request(endpoint: str) -> Dict[str, Any]:
+    """Debug Service Management API requests to see actual responses.
+    
+    Args:
+        endpoint: Service desk API endpoint to test (e.g., 'request', 'servicedesk/1/request')
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_debug_request(endpoint)
 
 
 @mcp.tool()
