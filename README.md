@@ -350,12 +350,26 @@ Then use in configurations:
 - `confluence_update_page(page_id, title, content, version)` - Update existing Confluence page
 
 ### Service Management Operations
+
+#### Discovery Tools (Essential for AI Agents)
 - `servicedesk_check_availability()` - Check if Jira Service Management is configured
+- `servicedesk_list_service_desks(limit=50)` - List available service desks for creating requests
+- `servicedesk_get_service_desk(service_desk_id)` - Get detailed service desk information
+- `servicedesk_list_request_types(service_desk_id=None, limit=50)` - List available request types
+- `servicedesk_get_request_type(service_desk_id, request_type_id)` - Get detailed request type information
+- `servicedesk_get_request_type_fields(service_desk_id, request_type_id)` - Get required/optional fields for request type
+
+#### Request Management
 - `servicedesk_get_requests(service_desk_id=None, limit=50)` - Get service desk requests
 - `servicedesk_get_request(issue_key)` - Get specific service desk request details
 - `servicedesk_create_request(service_desk_id, request_type_id, summary, description)` - Create new service request
 - `servicedesk_add_comment(issue_key, comment, public=True)` - Add comment to service request
+- `servicedesk_get_request_comments(issue_key, limit=50)` - Get comments for a service request
 - `servicedesk_get_request_status(issue_key)` - Get service request status
+- `servicedesk_get_request_transitions(issue_key)` - Get available status transitions for request
+- `servicedesk_transition_request(issue_key, transition_id, comment=None)` - Transition request to new status
+
+#### Approval & Participant Management
 - `servicedesk_get_approvals(issue_key)` - Get approval information for request
 - `servicedesk_approve_request(issue_key, approval_id, decision)` - Approve or decline request approval
 - `servicedesk_get_participants(issue_key)` - Get participants for request
@@ -384,6 +398,35 @@ docs = await confluence_search("API integration", limit=5)
 
 # Get specific page content for context
 page_content = await confluence_get_page("123456789")
+
+# Service Management workflow example
+# 1. Discover available service desks
+service_desks = await servicedesk_list_service_desks()
+service_desk_id = service_desks[0]["id"]
+
+# 2. Find available request types
+request_types = await servicedesk_list_request_types(service_desk_id)
+request_type_id = request_types[0]["id"]
+
+# 3. Check required fields for the request type
+fields = await servicedesk_get_request_type_fields(service_desk_id, request_type_id)
+required_fields = [f for f in fields if f.get("required", False)]
+
+# 4. Create a service desk request
+new_request = await servicedesk_create_request(
+    service_desk_id=service_desk_id,
+    request_type_id=request_type_id,
+    summary="Need help with system access",
+    description="User needs access to the development environment"
+)
+
+# 5. Add a comment and manage the request
+await servicedesk_add_comment(new_request["issueKey"], "Additional context: User is a new team member")
+
+# 6. Check available transitions and move to next status
+transitions = await servicedesk_get_request_transitions(new_request["issueKey"])
+if transitions:
+    await servicedesk_transition_request(new_request["issueKey"], transitions[0]["id"], "Moving to in progress")
 ```
 
 ## Testing
