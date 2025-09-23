@@ -49,7 +49,10 @@ Navigate to **Permissions** → **Confluence API** and add:
 
 #### Service Management API Scopes
 Navigate to **Permissions** → **Jira Service Management API** and add:
-- `read:servicedesk-request` - Read service management tickets
+- `read:servicedesk-request` - Read service management requests
+- `write:servicedesk-request` - Create and update service management requests  
+- `manage:servicedesk-customer` - Manage service desk customers and participants
+- `read:knowledgebase:jira-service-management` - Search knowledge base articles
 
 #### User Identity API Scopes
 Navigate to **Permissions** → **User identity API** and add:
@@ -82,7 +85,7 @@ After installing the app:
 
 ### 5. Scope Configuration Summary
 
-**Minimal Required (9 scopes):**
+**Minimal Required (12 scopes):**
 ```
 read:jira-work
 read:jira-user  
@@ -91,6 +94,9 @@ read:page:confluence
 read:space:confluence
 write:page:confluence
 read:servicedesk-request
+write:servicedesk-request
+manage:servicedesk-customer
+read:knowledgebase:jira-service-management
 read:me
 offline_access
 ```
@@ -345,6 +351,33 @@ Then use in configurations:
 - `confluence_create_page(space_key, title, content, parent_id=None)` - Create new Confluence page
 - `confluence_update_page(page_id, title, content, version)` - Update existing Confluence page
 
+### Service Management Operations
+
+#### Discovery Tools (Essential for AI Agents)
+- `servicedesk_check_availability()` - Check if Jira Service Management is configured
+- `servicedesk_list_service_desks(limit=50)` - List available service desks for creating requests
+- `servicedesk_get_service_desk(service_desk_id)` - Get detailed service desk information
+- `servicedesk_list_request_types(service_desk_id=None, limit=50)` - List available request types
+- `servicedesk_get_request_type(service_desk_id, request_type_id)` - Get detailed request type information
+- `servicedesk_get_request_type_fields(service_desk_id, request_type_id)` - Get required/optional fields for request type
+
+#### Request Management
+- `servicedesk_get_requests(service_desk_id=None, limit=50)` - Get service desk requests
+- `servicedesk_get_request(issue_key)` - Get specific service desk request details
+- `servicedesk_create_request(service_desk_id, request_type_id, summary, description)` - Create new service request
+- `servicedesk_add_comment(issue_key, comment, public=True)` - Add comment to service request
+- `servicedesk_get_request_comments(issue_key, limit=50)` - Get comments for a service request
+- `servicedesk_get_request_status(issue_key)` - Get service request status
+- `servicedesk_get_request_transitions(issue_key)` - Get available status transitions for request
+- `servicedesk_transition_request(issue_key, transition_id, comment=None)` - Transition request to new status
+
+#### Approval & Participant Management
+- `servicedesk_get_approvals(issue_key)` - Get approval information for request
+- `servicedesk_approve_request(issue_key, approval_id, decision)` - Approve or decline request approval
+- `servicedesk_get_participants(issue_key)` - Get participants for request
+- `servicedesk_add_participants(issue_key, usernames)` - Add participants to request (with confirmation prompts)
+- `servicedesk_manage_notifications(issue_key, subscribe)` - Subscribe/unsubscribe from request notifications
+
 ## Example Usage
 
 ```python
@@ -367,6 +400,35 @@ docs = await confluence_search("API integration", limit=5)
 
 # Get specific page content for context
 page_content = await confluence_get_page("123456789")
+
+# Service Management workflow example
+# 1. Discover available service desks
+service_desks = await servicedesk_list_service_desks()
+service_desk_id = service_desks[0]["id"]
+
+# 2. Find available request types
+request_types = await servicedesk_list_request_types(service_desk_id)
+request_type_id = request_types[0]["id"]
+
+# 3. Check required fields for the request type
+fields = await servicedesk_get_request_type_fields(service_desk_id, request_type_id)
+required_fields = [f for f in fields if f.get("required", False)]
+
+# 4. Create a service desk request
+new_request = await servicedesk_create_request(
+    service_desk_id=service_desk_id,
+    request_type_id=request_type_id,
+    summary="Need help with system access",
+    description="User needs access to the development environment"
+)
+
+# 5. Add a comment and manage the request
+await servicedesk_add_comment(new_request["issueKey"], "Additional context: User is a new team member")
+
+# 6. Check available transitions and move to next status
+transitions = await servicedesk_get_request_transitions(new_request["issueKey"])
+if transitions:
+    await servicedesk_transition_request(new_request["issueKey"], transitions[0]["id"], "Moving to in progress")
 ```
 
 ## Testing
@@ -410,10 +472,10 @@ python tests/test_functionality.py
 
 This MCP server uses **minimal required scopes** following the principle of least privilege:
 
-### Essential Scopes (9 total)
+### Essential Scopes (12 total)
 - **Jira**: `read:jira-work`, `read:jira-user`, `write:jira-work`
 - **Confluence**: `read:page:confluence`, `read:space:confluence`, `write:page:confluence`
-- **Service Management**: `read:servicedesk-request`
+- **Service Management**: `read:servicedesk-request`, `write:servicedesk-request`, `manage:servicedesk-customer`, `read:knowledgebase:jira-service-management`
 - **Core**: `read:me`, `offline_access`
 
 ### Optional Scopes (add only if needed)
@@ -528,8 +590,8 @@ These Service Management features will enable AI agents to:
 - **Workflow Automation** - Move requests through appropriate workflow states
 - **Performance Analytics** - Monitor team performance and service quality metrics
 
-### 📅 Implementation Priority
+### 📅 Implementation Status
 
-**Phase 1 (v0.3.0):** Core request management (create, status, comments, transitions)  
-**Phase 2 (v0.4.0):** Approval workflows and participant management  
-**Phase 3 (v0.5.0):** SLA monitoring, attachments, and feedback systems
+**Phase 1 (v0.3.0) - ✅ COMPLETED:** Core request management (create, status, comments)  
+**Phase 2 (v0.3.1) - ✅ COMPLETED:** Approval workflows and participant management  
+**Phase 3 (v0.3.2) - 🚧 PLANNED:** SLA monitoring, attachments, and feedback systems

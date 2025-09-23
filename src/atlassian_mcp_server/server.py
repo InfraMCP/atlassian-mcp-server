@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import functools
 import hashlib
 import json
 import logging
@@ -40,6 +41,27 @@ class AtlassianConfig(BaseModel):
     client_secret: str
     access_token: Optional[str] = None
     refresh_token: Optional[str] = None
+
+
+class AtlassianError(Exception):
+    """Structured error for AI agent consumption."""
+    def __init__(self, message: str, error_code: str, context: Dict[str, Any] = None, 
+                 troubleshooting: List[str] = None, suggested_actions: List[str] = None):
+        super().__init__(message)
+        self.error_code = error_code
+        self.context = context or {}
+        self.troubleshooting = troubleshooting or []
+        self.suggested_actions = suggested_actions or []
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "success": False,
+            "error": str(self),
+            "error_code": self.error_code,
+            "context": self.context,
+            "troubleshooting": self.troubleshooting,
+            "suggested_actions": self.suggested_actions
+        }
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -143,8 +165,10 @@ class AtlassianClient:
                 "read:space:confluence",             # Read space info (replaces read:confluence-space.summary)
                 "write:page:confluence",             # Create/update pages (replaces write:confluence-content)
                 
-                # Service Management - For support context
-                "read:servicedesk-request",          # Read SM tickets
+                # Service Management - Classic scopes (not granular)
+                "read:servicedesk-request",          # Read service desk requests
+                "write:servicedesk-request",         # Create/update service desk requests
+                "manage:servicedesk-customer",       # Manage service desk customers and participants
                 
                 # Core
                 "read:me",                           # User profile
@@ -285,7 +309,13 @@ class AtlassianClient:
         }
     
     async def make_request(self, method: str, url: str, **kwargs) -> httpx.Response:
-        """Make authenticated request with automatic token refresh"""
+        """Make authenticated request with enhanced error handling and debugging."""
+        # Extract operation context for debugging
+        operation_context = kwargs.pop('operation_context', {})
+        operation_name = operation_context.get('name', 'unknown')
+        
+        logger.debug(f"make_request: {method} {url} - Operation: {operation_name}")
+        
         try:
             headers = await self.get_headers()
             kwargs.setdefault('headers', {}).update(headers)
@@ -294,23 +324,83 @@ class AtlassianClient:
             
             # Try to refresh token if unauthorized
             if response.status_code == 401 and self.config.refresh_token:
+                logger.debug(f"make_request: Token expired, refreshing for operation: {operation_name}")
                 if await self.refresh_access_token():
                     headers = await self.get_headers()
                     kwargs['headers'].update(headers)
                     response = await self.client.request(method, url, **kwargs)
             
-            # If still unauthorized, need re-authentication
+            # Enhanced error handling with structured responses
             if response.status_code == 401:
-                raise ValueError("Authentication required - use authenticate_atlassian tool")
+                raise AtlassianError(
+                    "Authentication required - access token expired or invalid",
+                    "AUTH_REQUIRED",
+                    context={"operation": operation_name, "url": url},
+                    troubleshooting=["Access token may have expired", "OAuth scopes may be insufficient"],
+                    suggested_actions=["authenticate_atlassian()"]
+                )
             
-            response.raise_for_status()
+            # Service Management specific errors
+            if response.status_code == 404 and '/servicedeskapi/' in url:
+                if '/request/' in url:
+                    raise AtlassianError(
+                        "Service desk request not found",
+                        "SERVICEDESK_REQUEST_NOT_FOUND",
+                        context={"operation": operation_name, "url": url},
+                        troubleshooting=[
+                            "Issue may be a regular Jira issue (not service desk request)",
+                            "Missing OAuth scopes for Service Management",
+                            "Insufficient permissions for Service Management"
+                        ],
+                        suggested_actions=["authenticate_atlassian()", "servicedesk_check_availability()"]
+                    )
+                else:
+                    raise AtlassianError(
+                        "Service desk endpoint not found",
+                        "SERVICEDESK_ENDPOINT_NOT_FOUND", 
+                        context={"operation": operation_name, "url": url},
+                        troubleshooting=["Missing OAuth scopes for Service Management"],
+                        suggested_actions=["authenticate_atlassian()"]
+                    )
+            
+            if response.status_code == 403 and '/servicedeskapi/' in url:
+                raise AtlassianError(
+                    "Access denied to Service Management",
+                    "SERVICEDESK_ACCESS_DENIED",
+                    context={"operation": operation_name, "url": url},
+                    troubleshooting=[
+                        "User may lack Service Management permissions",
+                        "OAuth scopes may be insufficient"
+                    ],
+                    suggested_actions=["authenticate_atlassian()", "Contact Atlassian administrator"]
+                )
+            
+            # Generic HTTP errors
+            if not response.is_success:
+                logger.error(f"make_request: HTTP {response.status_code} - {response.text} [operation={operation_name}]")
+                raise AtlassianError(
+                    f"HTTP {response.status_code}: {response.text}",
+                    f"HTTP_{response.status_code}",
+                    context={"operation": operation_name, "url": url, "status_code": response.status_code},
+                    troubleshooting=[f"Server returned {response.status_code} error"],
+                    suggested_actions=["Check request parameters", "Verify permissions"]
+                )
+            
+            logger.debug(f"make_request: Success {response.status_code} [operation={operation_name}]")
             return response
-        except ValueError as e:
-            # Re-raise authentication errors with debug info
-            raise ValueError(f"{str(e)} [DEBUG: method={method}, url={url}, has_token={bool(self.config.access_token)}]")
+            
+        except AtlassianError:
+            # Re-raise structured errors as-is
+            raise
         except Exception as e:
-            # Add debug info to other errors
-            raise Exception(f"{str(e)} [DEBUG: method={method}, url={url}, status={getattr(response, 'status_code', 'no_response')}]")
+            logger.error(f"make_request: Unexpected error - {e} [operation={operation_name}]")
+            raise AtlassianError(
+                f"Unexpected error: {e}",
+                "UNEXPECTED_ERROR",
+                context={"operation": operation_name, "url": url},
+                troubleshooting=["Check network connection", "Verify request parameters"],
+                suggested_actions=["Retry the operation", "Check logs for details"]
+            )
     
     async def get_cloud_id(self, required_scopes: Optional[List[str]] = None) -> str:
         """Get the cloud ID for the configured site, optionally filtering by required scopes"""
@@ -588,6 +678,407 @@ class AtlassianClient:
         
         response = await self.make_request("PUT", url, json=data)
         return response.json()
+    
+    # Service Management Methods
+    
+    # Phase 2: Critical Missing Tools - Service Desk Discovery
+    async def servicedesk_list_service_desks(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """List available service desks for creating requests.
+        
+        Essential for AI agents to discover service desks before creating requests.
+        This is typically the first tool to call when working with Service Management.
+        
+        Args:
+            limit: Maximum number of service desks to return (default: 50, max: 100)
+        
+        Returns:
+            List of service desk objects with id, projectId, projectName, and projectKey
+            
+        Example:
+            # Get all available service desks
+            service_desks = await servicedesk_list_service_desks()
+            
+            # Use first service desk for request creation
+            if service_desks:
+                service_desk_id = service_desks[0]["id"]
+        
+        Common Errors:
+            - "Access denied": User may lack Service Management permissions
+            - "Endpoint not found": Missing OAuth scopes - re-authenticate
+        """
+        logger.debug(f"servicedesk_list_service_desks: Fetching service desks (limit={limit})")
+        
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
+        params = {"limit": limit}
+        
+        response = await self.make_request(
+            "GET", url, params=params,
+            operation_context={"name": "servicedesk_list_service_desks", "limit": limit}
+        )
+        
+        results = response.json().get("values", [])
+        logger.debug(f"servicedesk_list_service_desks: Found {len(results)} service desks")
+        return results
+    
+    async def servicedesk_get_service_desk(self, service_desk_id: str) -> Dict[str, Any]:
+        """Get detailed information about a specific service desk.
+        
+        Args:
+            service_desk_id: Service desk identifier
+        
+        Returns:
+            Service desk object with detailed information
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
+    
+    # Phase 2: Critical Missing Tools - Request Type Discovery
+    async def servicedesk_list_request_types(self, service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+        """List available request types for creating service desk requests.
+        
+        Essential for AI agents to discover request types before creating requests.
+        
+        Args:
+            service_desk_id: Optional service desk ID to filter request types.
+                           If None, returns request types from all accessible service desks.
+            limit: Maximum number of request types to return (default: 50, max: 100)
+        
+        Returns:
+            List of request type objects with id, name, description, and serviceDeskId
+        """
+        cloud_id = await self.get_cloud_id()
+        
+        if service_desk_id:
+            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype"
+        else:
+            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/requesttype"
+        
+        params = {"limit": limit}
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("values", [])
+    
+    async def servicedesk_get_request_type(self, service_desk_id: str, request_type_id: str) -> Dict[str, Any]:
+        """Get detailed information about a specific request type.
+        
+        Args:
+            service_desk_id: Service desk identifier
+            request_type_id: Request type identifier
+        
+        Returns:
+            Request type object with detailed information
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype/{request_type_id}"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
+    
+    async def servicedesk_get_request_type_fields(self, service_desk_id: str, request_type_id: str) -> List[Dict[str, Any]]:
+        """Get required and optional fields for a specific request type.
+        
+        Essential for understanding what fields are needed when creating requests.
+        
+        Args:
+            service_desk_id: Service desk identifier
+            request_type_id: Request type identifier
+        
+        Returns:
+            List of field objects with fieldId, name, required, and other metadata
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype/{request_type_id}/field"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("requestTypeFields", [])
+    
+    # Phase 2: Enhanced Request Management
+    async def servicedesk_get_request_comments(self, issue_key: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get comments for a service desk request.
+        
+        Args:
+            issue_key: Service desk request key
+            limit: Maximum number of comments to return (default: 50)
+        
+        Returns:
+            List of comment objects with body, author, created date, and visibility
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
+        params = {"limit": limit}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("values", [])
+    
+    async def servicedesk_get_request_transitions(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get available transitions for a service desk request.
+        
+        Args:
+            issue_key: Service desk request key
+        
+        Returns:
+            List of transition objects with id, name, and to status
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/transition"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("values", [])
+    
+    async def servicedesk_transition_request(self, issue_key: str, transition_id: str, comment: Optional[str] = None) -> Dict[str, Any]:
+        """Transition a service desk request to a new status.
+        
+        Args:
+            issue_key: Service desk request key
+            transition_id: ID of the transition to perform
+            comment: Optional comment to add with the transition
+        
+        Returns:
+            Success confirmation with transition details
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/transition"
+        
+        data = {"id": transition_id}
+        if comment:
+            data["additionalComment"] = {"body": comment}
+        
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+
+    async def servicedesk_get_requests(self, service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0) -> List[Dict[str, Any]]:
+        """Get service desk requests with enhanced pagination."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
+        
+        params = {"limit": limit, "start": start}
+        if service_desk_id:
+            params["serviceDeskId"] = service_desk_id
+            
+        response = await self.make_request(
+            "GET", url, params=params,
+            operation_context={"name": "servicedesk_get_requests", "service_desk_id": service_desk_id, "limit": limit, "start": start}
+        )
+        return response.json().get("values", [])
+    
+    async def servicedesk_get_request(self, issue_key: str) -> Dict[str, Any]:
+        """Get specific service desk request details"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
+    
+    async def servicedesk_create_request(self, service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
+        """Create a new service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
+        
+        data = {
+            "serviceDeskId": service_desk_id,
+            "requestTypeId": request_type_id,
+            "requestFieldValues": {
+                "summary": summary,
+                "description": description
+            }
+        }
+        
+        response = await self.make_request(
+            "POST", url, json=data,
+            operation_context={"name": "servicedesk_create_request", "service_desk_id": service_desk_id, "request_type_id": request_type_id}
+        )
+        return response.json()
+    
+    async def servicedesk_add_comment(self, issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
+        """Add comment to service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
+        
+        data = {
+            "body": comment,
+            "public": public
+        }
+        
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_get_request_status(self, issue_key: str) -> Dict[str, Any]:
+        """Get service desk request status"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/status"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
+    
+    # Phase 2: Approval workflows and participant management
+    async def servicedesk_get_approvals(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get approval information for a service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("values", [])
+    
+    async def servicedesk_approve_request(self, issue_key: str, approval_id: str, decision: str) -> Dict[str, Any]:
+        """Approve or decline a service desk request approval
+        
+        Args:
+            issue_key: The service desk request key
+            approval_id: The approval ID to respond to
+            decision: 'approve' or 'decline'
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval/{approval_id}"
+        
+        data = {"decision": decision}
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_get_participants(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get participants for a service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("values", [])
+    
+    async def servicedesk_add_participants(self, issue_key: str, usernames: List[str]) -> Dict[str, Any]:
+        """Add participants to a service desk request"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
+        
+        data = {"usernames": usernames}
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def servicedesk_manage_notifications(self, issue_key: str, subscribe: bool) -> Dict[str, Any]:
+        """Subscribe or unsubscribe from service desk request notifications"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/notification"
+        
+        if subscribe:
+            response = await self.make_request("PUT", url)
+        else:
+            response = await self.make_request("DELETE", url)
+        
+        return {"success": True, "subscribed": subscribe}
+    
+    # Phase 3: Advanced Features - SLA & Performance Tracking
+    async def servicedesk_get_request_sla(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get SLA information for a service desk request."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla"
+        
+        response = await self.make_request(
+            "GET", url,
+            operation_context={"name": "servicedesk_get_request_sla", "issue_key": issue_key}
+        )
+        return response.json().get("values", [])
+    
+    async def servicedesk_get_sla_metric(self, issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
+        """Get detailed SLA metric information."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla/{sla_metric_id}"
+        
+        response = await self.make_request(
+            "GET", url,
+            operation_context={"name": "servicedesk_get_sla_metric", "issue_key": issue_key, "sla_metric_id": sla_metric_id}
+        )
+        return response.json()
+
+    # Phase 3: Advanced Features - Attachment Management  
+    async def servicedesk_get_request_attachments(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get attachments for a service desk request."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/attachment"
+        
+        response = await self.make_request(
+            "GET", url,
+            operation_context={"name": "servicedesk_get_request_attachments", "issue_key": issue_key}
+        )
+        return response.json().get("values", [])
+
+    # Phase 3: Advanced Features - Knowledge Base Integration
+    async def servicedesk_search_knowledge_base(self, query: str, service_desk_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search knowledge base articles."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/knowledgebase/article"
+        
+        params = {"query": query, "limit": limit}
+        if service_desk_id:
+            params["serviceDeskId"] = service_desk_id
+        
+        response = await self.make_request(
+            "GET", url, params=params,
+            operation_context={"name": "servicedesk_search_knowledge_base", "query": query, "service_desk_id": service_desk_id}
+        )
+        return response.json().get("values", [])
+    
+    async def servicedesk_debug_request(self, endpoint: str) -> Dict[str, Any]:
+        """Debug Service Management API requests to see actual responses"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/{endpoint}"
+        
+        try:
+            response = await self.client.request("GET", url, headers=await self.get_headers())
+            return {
+                "success": True,
+                "status_code": response.status_code,
+                "url": url,
+                "response_text": response.text[:500],  # First 500 chars
+                "headers": dict(response.headers)
+            }
+        except Exception as e:
+            return {
+                "success": False,
+                "error": str(e),
+                "url": url,
+                "status_code": getattr(e, 'response', {}).get('status_code', 'unknown')
+            }
+        """Check if Jira Service Management is available and configured"""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
+        
+        try:
+            response = await self.make_request("GET", url, params={"limit": 1})
+            service_desks = response.json().get("values", [])
+            
+            return {
+                "available": True,
+                "service_desk_count": len(service_desks),
+                "service_desks": service_desks,
+                "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured.",
+                "note": "If other servicedesk_ tools fail with 404 errors, you may need to re-authenticate with: authenticate_atlassian()"
+            }
+        except Exception as e:
+            return {
+                "available": False,
+                "service_desk_count": 0,
+                "service_desks": [],
+                "message": f"Jira Service Management not available: {str(e)}"
+            }
+
+
+import functools
+
+def handle_atlassian_errors(func):
+    """Decorator to convert AtlassianError to ValueError for MCP compatibility."""
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except AtlassianError as e:
+            # Convert structured error to simple ValueError for MCP
+            error_msg = f"{e} [Error Code: {e.error_code}]"
+            if e.troubleshooting:
+                error_msg += f" Troubleshooting: {'; '.join(e.troubleshooting)}"
+            if e.suggested_actions:
+                error_msg += f" Suggested actions: {'; '.join(e.suggested_actions)}"
+            raise ValueError(error_msg)
+    return wrapper
 
 
 # Initialize MCP server
@@ -712,6 +1203,402 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.confluence_update_page(page_id, title, content, version)
+
+
+@mcp.tool()
+async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0) -> List[Dict[str, Any]]:
+    """Get service desk requests with pagination support.
+    
+    Args:
+        service_desk_id: Optional service desk ID to filter requests
+        limit: Maximum number of requests to return (default: 50, max: 100)
+        start: Starting index for pagination (default: 0)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_requests(service_desk_id, limit, start)
+
+
+@mcp.tool()
+async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
+    """Get detailed information about a specific service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_create_request(service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
+    """Create a new service desk request.
+    
+    Args:
+        service_desk_id: ID of the service desk
+        request_type_id: ID of the request type
+        summary: Brief title of the request
+        description: Detailed description of the request
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_create_request(service_desk_id, request_type_id, summary, description)
+
+
+@mcp.tool()
+async def servicedesk_add_comment(issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
+    """Add a comment to a service desk request.
+    
+    Args:
+        issue_key: The service desk request key
+        comment: Comment text to add
+        public: Whether the comment is public (default: True) or internal
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_add_comment(issue_key, comment, public)
+
+
+@mcp.tool()
+async def servicedesk_get_request_status(issue_key: str) -> Dict[str, Any]:
+    """Get the current status of a service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_status(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_get_approvals(issue_key: str) -> List[Dict[str, Any]]:
+    """Get approval information for a service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_approvals(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_approve_request(issue_key: str, approval_id: str, decision: str) -> Dict[str, Any]:
+    """Approve or decline a service desk request approval.
+    
+    Args:
+        issue_key: The service desk request key
+        approval_id: The approval ID to respond to  
+        decision: 'approve' or 'decline'
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_approve_request(issue_key, approval_id, decision)
+
+
+@mcp.tool()
+async def servicedesk_get_participants(issue_key: str) -> List[Dict[str, Any]]:
+    """Get participants for a service desk request."""
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_participants(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_add_participants(issue_key: str, usernames: List[str]) -> Dict[str, Any]:
+    """Add participants to a service desk request.
+    
+    🚨 CRITICAL: DO NOT call this tool without explicit user confirmation first!
+    
+    REQUIRED WORKFLOW:
+    1. ALWAYS ask user: "Adding participants will subscribe them to notifications for ticket {issue_key}. 
+       Users {usernames} will receive emails for all updates and can view/comment on the ticket. 
+       Do you want to proceed? (yes/no)"
+    2. ONLY call this tool if user explicitly confirms with "yes"
+    3. If user says "no" or is unsure, do NOT call this tool
+    
+    This tool adds users to the ticket's notification list and grants them access.
+    
+    Args:
+        issue_key: The service desk request key
+        usernames: List of usernames to add as participants
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_add_participants(issue_key, usernames)
+
+
+@mcp.tool()
+async def servicedesk_manage_notifications(issue_key: str, subscribe: bool) -> Dict[str, Any]:
+    """Subscribe or unsubscribe from service desk request notifications.
+    
+    Args:
+        issue_key: The service desk request key
+        subscribe: True to subscribe, False to unsubscribe
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_manage_notifications(issue_key, subscribe)
+
+
+@mcp.tool()
+async def servicedesk_debug_request(endpoint: str) -> Dict[str, Any]:
+    """Debug Service Management API requests to see actual responses.
+    
+    Args:
+        endpoint: Service desk API endpoint to test (e.g., 'request', 'servicedesk/1/request')
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_debug_request(endpoint)
+
+
+@mcp.tool()
+async def servicedesk_check_availability() -> Dict[str, Any]:
+    """Check if Jira Service Management is available and configured on this Atlassian instance.
+    
+    Use this tool first to verify Service Management is set up before using other servicedesk_ tools.
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_check_availability()
+
+
+# Phase 2: Critical Missing Tools - Service Desk Discovery
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_list_service_desks(limit: int = 50) -> List[Dict[str, Any]]:
+    """List available service desks for creating requests.
+    
+    Essential for AI agents to discover service desks before creating requests.
+    Use this tool to find service desk IDs needed for servicedesk_create_request().
+    
+    Args:
+        limit: Maximum number of service desks to return (default: 50, max: 100)
+    
+    Returns:
+        List of service desk objects with id, projectId, projectName, and projectKey
+    
+    Example:
+        service_desks = await servicedesk_list_service_desks()
+        # Use service_desks[0]["id"] for creating requests
+        
+    Common Errors:
+        - "Access denied": User may lack Service Management permissions
+        - "Endpoint not found": Missing OAuth scopes - re-authenticate with authenticate_atlassian()
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_list_service_desks(limit)
+
+
+@mcp.tool()
+async def servicedesk_get_service_desk(service_desk_id: str) -> Dict[str, Any]:
+    """Get detailed information about a specific service desk.
+    
+    Args:
+        service_desk_id: Service desk identifier (get from servicedesk_list_service_desks)
+    
+    Returns:
+        Service desk object with detailed information
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_service_desk(service_desk_id)
+
+
+@mcp.tool()
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_list_request_types(service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    """List available request types for creating service desk requests.
+    
+    Essential for AI agents to discover request types before creating requests.
+    Use this tool to find request type IDs needed for servicedesk_create_request().
+    
+    Args:
+        service_desk_id: Optional service desk ID to filter request types.
+                        If None, returns request types from all accessible service desks.
+        limit: Maximum number of request types to return (default: 50, max: 100)
+    
+    Returns:
+        List of request type objects with id, name, description, and serviceDeskId
+    
+    Example:
+        # Get all request types
+        all_types = await servicedesk_list_request_types()
+        
+        # Get request types for specific service desk
+        it_types = await servicedesk_list_request_types(service_desk_id="10")
+        # Use it_types[0]["id"] for creating requests
+        
+    Common Errors:
+        - "Service desk not found": Use servicedesk_list_service_desks() to find valid IDs
+        - "Access denied": User may lack Service Management permissions
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_list_request_types(service_desk_id, limit)
+
+
+@mcp.tool()
+async def servicedesk_get_request_type(service_desk_id: str, request_type_id: str) -> Dict[str, Any]:
+    """Get detailed information about a specific request type.
+    
+    Args:
+        service_desk_id: Service desk identifier
+        request_type_id: Request type identifier
+    
+    Returns:
+        Request type object with detailed information
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_type(service_desk_id, request_type_id)
+
+
+@mcp.tool()
+async def servicedesk_get_request_type_fields(service_desk_id: str, request_type_id: str) -> List[Dict[str, Any]]:
+    """Get required and optional fields for a specific request type.
+    
+    Essential for understanding what fields are needed when creating requests.
+    
+    Args:
+        service_desk_id: Service desk identifier
+        request_type_id: Request type identifier
+    
+    Returns:
+        List of field objects with fieldId, name, required, and other metadata
+    
+    Example:
+        fields = await servicedesk_get_request_type_fields("10", "25")
+        required_fields = [f for f in fields if f.get("required", False)]
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_type_fields(service_desk_id, request_type_id)
+
+
+# Phase 2: Enhanced Request Management
+@mcp.tool()
+async def servicedesk_get_request_comments(issue_key: str, limit: int = 50) -> List[Dict[str, Any]]:
+    """Get comments for a service desk request.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+        limit: Maximum number of comments to return (default: 50)
+    
+    Returns:
+        List of comment objects with body, author, created date, and visibility
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_comments(issue_key, limit)
+
+
+@mcp.tool()
+async def servicedesk_get_request_transitions(issue_key: str) -> List[Dict[str, Any]]:
+    """Get available transitions for a service desk request.
+    
+    Use this to see what status changes are possible for a request.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+    
+    Returns:
+        List of transition objects with id, name, and to status
+    
+    Example:
+        transitions = await servicedesk_get_request_transitions("HELP-123")
+        # Use transitions[0]["id"] with servicedesk_transition_request()
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_transitions(issue_key)
+
+
+@mcp.tool()
+async def servicedesk_transition_request(issue_key: str, transition_id: str, comment: Optional[str] = None) -> Dict[str, Any]:
+    """Transition a service desk request to a new status.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+        transition_id: ID of the transition to perform (get from servicedesk_get_request_transitions)
+        comment: Optional comment to add with the transition
+    
+    Returns:
+        Success confirmation with transition details
+    
+    Example:
+        # First get available transitions
+        transitions = await servicedesk_get_request_transitions("HELP-123")
+        # Then transition to new status
+        result = await servicedesk_transition_request("HELP-123", transitions[0]["id"], "Moving to in progress")
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_transition_request(issue_key, transition_id, comment)
+
+
+# Phase 3: Advanced Features - MCP Tools
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_get_request_sla(issue_key: str) -> List[Dict[str, Any]]:
+    """Get SLA information for a service desk request.
+    
+    Shows SLA metrics, timing, and breach status for performance monitoring.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+    
+    Returns:
+        List of SLA metric objects with timing and status information
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_sla(issue_key)
+
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_get_sla_metric(issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
+    """Get detailed information about a specific SLA metric.
+    
+    Args:
+        issue_key: Service desk request key
+        sla_metric_id: SLA metric ID (from servicedesk_get_request_sla)
+    
+    Returns:
+        Detailed SLA metric with timing cycles and breach information
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_sla_metric(issue_key, sla_metric_id)
+
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_get_request_attachments(issue_key: str) -> List[Dict[str, Any]]:
+    """Get attachments for a service desk request.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+    
+    Returns:
+        List of attachment objects with filename, size, and download URLs
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_attachments(issue_key)
+
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+    """Search knowledge base articles for relevant information.
+    
+    Args:
+        query: Search query string
+        service_desk_id: Optional service desk ID to filter articles
+        limit: Maximum articles to return (default: 10, max: 50)
+    
+    Returns:
+        List of knowledge base articles with title, excerpt, and content URLs
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_search_knowledge_base(query, service_desk_id, limit)
 
 
 async def initialize_client():
