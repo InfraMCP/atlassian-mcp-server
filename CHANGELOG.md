@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built-in confirmation prompts for participant management to prevent notification spam
 
 ### Changed
-- Updated OAuth scopes from 10 to 16 total required scopes
+- Updated OAuth scopes from 10 to 11 total required scopes (using classic Service Management scopes)
 - Enhanced Service Management documentation with Phase 2 tools
 
 ### Security

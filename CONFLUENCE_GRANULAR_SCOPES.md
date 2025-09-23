@@ -1,4 +1,4 @@
-# Granular Scopes
+# Confluence Granular Scopes
 
 Use these scopes only when you can't use classic scopes.
 

@@ -143,15 +143,10 @@ class AtlassianClient:
                 "read:space:confluence",             # Read space info (replaces read:confluence-space.summary)
                 "write:page:confluence",             # Create/update pages (replaces write:confluence-content)
                 
-                # Service Management - For support context
-                "read:servicedesk-request",          # Read SM tickets
-                "write:servicedesk-request",         # Create/update SM tickets
-                "read:request.approval",             # View approval workflows
-                "write:request.approval",            # Approve/decline requests
-                "read:request.participant",          # View request participants
-                "write:request.participant",         # Manage request participants
-                "read:request.notification",         # Check notification subscriptions
-                "write:request.notification",        # Manage notification preferences
+                # Service Management - Classic scopes (not granular)
+                "read:servicedesk-request",          # Read service desk requests
+                "write:servicedesk-request",         # Create/update service desk requests
+                "manage:servicedesk-customer",       # Manage service desk customers and participants
                 
                 # Core
                 "read:me",                           # User profile
