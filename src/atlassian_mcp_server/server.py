@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import functools
 import hashlib
 import json
 import logging
@@ -40,6 +41,27 @@ class AtlassianConfig(BaseModel):
     client_secret: str
     access_token: Optional[str] = None
     refresh_token: Optional[str] = None
+
+
+class AtlassianError(Exception):
+    """Structured error for AI agent consumption."""
+    def __init__(self, message: str, error_code: str, context: Dict[str, Any] = None, 
+                 troubleshooting: List[str] = None, suggested_actions: List[str] = None):
+        super().__init__(message)
+        self.error_code = error_code
+        self.context = context or {}
+        self.troubleshooting = troubleshooting or []
+        self.suggested_actions = suggested_actions or []
+    
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "success": False,
+            "error": str(self),
+            "error_code": self.error_code,
+            "context": self.context,
+            "troubleshooting": self.troubleshooting,
+            "suggested_actions": self.suggested_actions
+        }
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -287,7 +309,13 @@ class AtlassianClient:
         }
     
     async def make_request(self, method: str, url: str, **kwargs) -> httpx.Response:
-        """Make authenticated request with automatic token refresh"""
+        """Make authenticated request with enhanced error handling and debugging."""
+        # Extract operation context for debugging
+        operation_context = kwargs.pop('operation_context', {})
+        operation_name = operation_context.get('name', 'unknown')
+        
+        logger.debug(f"make_request: {method} {url} - Operation: {operation_name}")
+        
         try:
             headers = await self.get_headers()
             kwargs.setdefault('headers', {}).update(headers)
@@ -296,34 +324,83 @@ class AtlassianClient:
             
             # Try to refresh token if unauthorized
             if response.status_code == 401 and self.config.refresh_token:
+                logger.debug(f"make_request: Token expired, refreshing for operation: {operation_name}")
                 if await self.refresh_access_token():
                     headers = await self.get_headers()
                     kwargs['headers'].update(headers)
                     response = await self.client.request(method, url, **kwargs)
             
-            # If still unauthorized, need re-authentication
+            # Enhanced error handling with structured responses
             if response.status_code == 401:
-                raise ValueError("Authentication required - use authenticate_atlassian tool")
+                raise AtlassianError(
+                    "Authentication required - access token expired or invalid",
+                    "AUTH_REQUIRED",
+                    context={"operation": operation_name, "url": url},
+                    troubleshooting=["Access token may have expired", "OAuth scopes may be insufficient"],
+                    suggested_actions=["authenticate_atlassian()"]
+                )
             
-            # Enhanced error handling for Service Management endpoints
+            # Service Management specific errors
             if response.status_code == 404 and '/servicedeskapi/' in url:
                 if '/request/' in url:
-                    raise ValueError("Service desk request not found. This may be: 1) A regular Jira issue (not a service desk request), 2) Missing OAuth scopes (try re-authenticating with authenticate_atlassian()), or 3) Insufficient permissions for Service Management.")
+                    raise AtlassianError(
+                        "Service desk request not found",
+                        "SERVICEDESK_REQUEST_NOT_FOUND",
+                        context={"operation": operation_name, "url": url},
+                        troubleshooting=[
+                            "Issue may be a regular Jira issue (not service desk request)",
+                            "Missing OAuth scopes for Service Management",
+                            "Insufficient permissions for Service Management"
+                        ],
+                        suggested_actions=["authenticate_atlassian()", "servicedesk_check_availability()"]
+                    )
                 else:
-                    raise ValueError("Service desk endpoint not found. This may be due to missing OAuth scopes. Try re-authenticating with authenticate_atlassian() to get the latest Service Management permissions.")
+                    raise AtlassianError(
+                        "Service desk endpoint not found",
+                        "SERVICEDESK_ENDPOINT_NOT_FOUND", 
+                        context={"operation": operation_name, "url": url},
+                        troubleshooting=["Missing OAuth scopes for Service Management"],
+                        suggested_actions=["authenticate_atlassian()"]
+                    )
             
-            # Handle other permission-related errors
             if response.status_code == 403 and '/servicedeskapi/' in url:
-                raise ValueError("Access denied to Service Management. You may need to re-authenticate with authenticate_atlassian() to get the required OAuth scopes, or your user may lack Service Management permissions.")
+                raise AtlassianError(
+                    "Access denied to Service Management",
+                    "SERVICEDESK_ACCESS_DENIED",
+                    context={"operation": operation_name, "url": url},
+                    troubleshooting=[
+                        "User may lack Service Management permissions",
+                        "OAuth scopes may be insufficient"
+                    ],
+                    suggested_actions=["authenticate_atlassian()", "Contact Atlassian administrator"]
+                )
             
-            response.raise_for_status()
+            # Generic HTTP errors
+            if not response.is_success:
+                logger.error(f"make_request: HTTP {response.status_code} - {response.text} [operation={operation_name}]")
+                raise AtlassianError(
+                    f"HTTP {response.status_code}: {response.text}",
+                    f"HTTP_{response.status_code}",
+                    context={"operation": operation_name, "url": url, "status_code": response.status_code},
+                    troubleshooting=[f"Server returned {response.status_code} error"],
+                    suggested_actions=["Check request parameters", "Verify permissions"]
+                )
+            
+            logger.debug(f"make_request: Success {response.status_code} [operation={operation_name}]")
             return response
-        except ValueError as e:
-            # Re-raise authentication and service desk errors as-is
-            raise e
+            
+        except AtlassianError:
+            # Re-raise structured errors as-is
+            raise
         except Exception as e:
-            # Add debug info to other errors
-            raise Exception(f"{str(e)} [DEBUG: method={method}, url={url}, status={getattr(response, 'status_code', 'no_response')}]")
+            logger.error(f"make_request: Unexpected error - {e} [operation={operation_name}]")
+            raise AtlassianError(
+                f"Unexpected error: {e}",
+                "UNEXPECTED_ERROR",
+                context={"operation": operation_name, "url": url},
+                troubleshooting=["Check network connection", "Verify request parameters"],
+                suggested_actions=["Retry the operation", "Check logs for details"]
+            )
     
     async def get_cloud_id(self, required_scopes: Optional[List[str]] = None) -> str:
         """Get the cloud ID for the configured site, optionally filtering by required scopes"""
@@ -609,19 +686,40 @@ class AtlassianClient:
         """List available service desks for creating requests.
         
         Essential for AI agents to discover service desks before creating requests.
+        This is typically the first tool to call when working with Service Management.
         
         Args:
             limit: Maximum number of service desks to return (default: 50, max: 100)
         
         Returns:
             List of service desk objects with id, projectId, projectName, and projectKey
+            
+        Example:
+            # Get all available service desks
+            service_desks = await servicedesk_list_service_desks()
+            
+            # Use first service desk for request creation
+            if service_desks:
+                service_desk_id = service_desks[0]["id"]
+        
+        Common Errors:
+            - "Access denied": User may lack Service Management permissions
+            - "Endpoint not found": Missing OAuth scopes - re-authenticate
         """
+        logger.debug(f"servicedesk_list_service_desks: Fetching service desks (limit={limit})")
+        
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
         params = {"limit": limit}
         
-        response = await self.make_request("GET", url, params=params)
-        return response.json().get("values", [])
+        response = await self.make_request(
+            "GET", url, params=params,
+            operation_context={"name": "servicedesk_list_service_desks", "limit": limit}
+        )
+        
+        results = response.json().get("values", [])
+        logger.debug(f"servicedesk_list_service_desks: Found {len(results)} service desks")
+        return results
     
     async def servicedesk_get_service_desk(self, service_desk_id: str) -> Dict[str, Any]:
         """Get detailed information about a specific service desk.
@@ -751,17 +849,19 @@ class AtlassianClient:
         response = await self.make_request("POST", url, json=data)
         return response.json()
 
-    async def servicedesk_get_requests(self, service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get service desk requests"""
+    async def servicedesk_get_requests(self, service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0) -> List[Dict[str, Any]]:
+        """Get service desk requests with enhanced pagination."""
         cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
         
+        params = {"limit": limit, "start": start}
         if service_desk_id:
-            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/request"
-        else:
-            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
-        
-        params = {"limit": limit}
-        response = await self.make_request("GET", url, params=params)
+            params["serviceDeskId"] = service_desk_id
+            
+        response = await self.make_request(
+            "GET", url, params=params,
+            operation_context={"name": "servicedesk_get_requests", "service_desk_id": service_desk_id, "limit": limit, "start": start}
+        )
         return response.json().get("values", [])
     
     async def servicedesk_get_request(self, issue_key: str) -> Dict[str, Any]:
@@ -775,7 +875,7 @@ class AtlassianClient:
     async def servicedesk_create_request(self, service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
         """Create a new service desk request"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/request"
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
         
         data = {
             "serviceDeskId": service_desk_id,
@@ -786,7 +886,10 @@ class AtlassianClient:
             }
         }
         
-        response = await self.make_request("POST", url, json=data)
+        response = await self.make_request(
+            "POST", url, json=data,
+            operation_context={"name": "servicedesk_create_request", "service_desk_id": service_desk_id, "request_type_id": request_type_id}
+        )
         return response.json()
     
     async def servicedesk_add_comment(self, issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
@@ -863,6 +966,57 @@ class AtlassianClient:
         
         return {"success": True, "subscribed": subscribe}
     
+    # Phase 3: Advanced Features - SLA & Performance Tracking
+    async def servicedesk_get_request_sla(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get SLA information for a service desk request."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla"
+        
+        response = await self.make_request(
+            "GET", url,
+            operation_context={"name": "servicedesk_get_request_sla", "issue_key": issue_key}
+        )
+        return response.json().get("values", [])
+    
+    async def servicedesk_get_sla_metric(self, issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
+        """Get detailed SLA metric information."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla/{sla_metric_id}"
+        
+        response = await self.make_request(
+            "GET", url,
+            operation_context={"name": "servicedesk_get_sla_metric", "issue_key": issue_key, "sla_metric_id": sla_metric_id}
+        )
+        return response.json()
+
+    # Phase 3: Advanced Features - Attachment Management  
+    async def servicedesk_get_request_attachments(self, issue_key: str) -> List[Dict[str, Any]]:
+        """Get attachments for a service desk request."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/attachment"
+        
+        response = await self.make_request(
+            "GET", url,
+            operation_context={"name": "servicedesk_get_request_attachments", "issue_key": issue_key}
+        )
+        return response.json().get("values", [])
+
+    # Phase 3: Advanced Features - Knowledge Base Integration
+    async def servicedesk_search_knowledge_base(self, query: str, service_desk_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+        """Search knowledge base articles."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/knowledgebase/article"
+        
+        params = {"query": query, "limit": limit}
+        if service_desk_id:
+            params["serviceDeskId"] = service_desk_id
+        
+        response = await self.make_request(
+            "GET", url, params=params,
+            operation_context={"name": "servicedesk_search_knowledge_base", "query": query, "service_desk_id": service_desk_id}
+        )
+        return response.json().get("values", [])
+    
     async def servicedesk_debug_request(self, endpoint: str) -> Dict[str, Any]:
         """Debug Service Management API requests to see actual responses"""
         cloud_id = await self.get_cloud_id()
@@ -906,6 +1060,25 @@ class AtlassianClient:
                 "service_desks": [],
                 "message": f"Jira Service Management not available: {str(e)}"
             }
+
+
+import functools
+
+def handle_atlassian_errors(func):
+    """Decorator to convert AtlassianError to ValueError for MCP compatibility."""
+    @functools.wraps(func)
+    async def wrapper(*args, **kwargs):
+        try:
+            return await func(*args, **kwargs)
+        except AtlassianError as e:
+            # Convert structured error to simple ValueError for MCP
+            error_msg = f"{e} [Error Code: {e.error_code}]"
+            if e.troubleshooting:
+                error_msg += f" Troubleshooting: {'; '.join(e.troubleshooting)}"
+            if e.suggested_actions:
+                error_msg += f" Suggested actions: {'; '.join(e.suggested_actions)}"
+            raise ValueError(error_msg)
+    return wrapper
 
 
 # Initialize MCP server
@@ -1033,16 +1206,17 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
 
 
 @mcp.tool()
-async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
-    """Get service desk requests.
+async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0) -> List[Dict[str, Any]]:
+    """Get service desk requests with pagination support.
     
     Args:
         service_desk_id: Optional service desk ID to filter requests
-        limit: Maximum number of requests to return (default: 50)
+        limit: Maximum number of requests to return (default: 50, max: 100)
+        start: Starting index for pagination (default: 0)
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_get_requests(service_desk_id, limit)
+    return await atlassian_client.servicedesk_get_requests(service_desk_id, limit, start)
 
 
 @mcp.tool()
@@ -1182,6 +1356,7 @@ async def servicedesk_check_availability() -> Dict[str, Any]:
 
 # Phase 2: Critical Missing Tools - Service Desk Discovery
 @mcp.tool()
+@handle_atlassian_errors
 async def servicedesk_list_service_desks(limit: int = 50) -> List[Dict[str, Any]]:
     """List available service desks for creating requests.
     
@@ -1197,6 +1372,10 @@ async def servicedesk_list_service_desks(limit: int = 50) -> List[Dict[str, Any]
     Example:
         service_desks = await servicedesk_list_service_desks()
         # Use service_desks[0]["id"] for creating requests
+        
+    Common Errors:
+        - "Access denied": User may lack Service Management permissions
+        - "Endpoint not found": Missing OAuth scopes - re-authenticate with authenticate_atlassian()
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
@@ -1219,6 +1398,8 @@ async def servicedesk_get_service_desk(service_desk_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
+@mcp.tool()
+@handle_atlassian_errors
 async def servicedesk_list_request_types(service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
     """List available request types for creating service desk requests.
     
@@ -1240,6 +1421,10 @@ async def servicedesk_list_request_types(service_desk_id: Optional[str] = None, 
         # Get request types for specific service desk
         it_types = await servicedesk_list_request_types(service_desk_id="10")
         # Use it_types[0]["id"] for creating requests
+        
+    Common Errors:
+        - "Service desk not found": Use servicedesk_list_service_desks() to find valid IDs
+        - "Access denied": User may lack Service Management permissions
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
@@ -1343,6 +1528,77 @@ async def servicedesk_transition_request(issue_key: str, transition_id: str, com
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.servicedesk_transition_request(issue_key, transition_id, comment)
+
+
+# Phase 3: Advanced Features - MCP Tools
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_get_request_sla(issue_key: str) -> List[Dict[str, Any]]:
+    """Get SLA information for a service desk request.
+    
+    Shows SLA metrics, timing, and breach status for performance monitoring.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+    
+    Returns:
+        List of SLA metric objects with timing and status information
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_sla(issue_key)
+
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_get_sla_metric(issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
+    """Get detailed information about a specific SLA metric.
+    
+    Args:
+        issue_key: Service desk request key
+        sla_metric_id: SLA metric ID (from servicedesk_get_request_sla)
+    
+    Returns:
+        Detailed SLA metric with timing cycles and breach information
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_sla_metric(issue_key, sla_metric_id)
+
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_get_request_attachments(issue_key: str) -> List[Dict[str, Any]]:
+    """Get attachments for a service desk request.
+    
+    Args:
+        issue_key: Service desk request key (e.g., "HELP-123")
+    
+    Returns:
+        List of attachment objects with filename, size, and download URLs
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_get_request_attachments(issue_key)
+
+
+@mcp.tool()
+@handle_atlassian_errors
+async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+    """Search knowledge base articles for relevant information.
+    
+    Args:
+        query: Search query string
+        service_desk_id: Optional service desk ID to filter articles
+        limit: Maximum articles to return (default: 10, max: 50)
+    
+    Returns:
+        List of knowledge base articles with title, excerpt, and content URLs
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.servicedesk_search_knowledge_base(query, service_desk_id, limit)
 
 
 async def initialize_client():

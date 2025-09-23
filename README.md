@@ -52,6 +52,7 @@ Navigate to **Permissions** → **Jira Service Management API** and add:
 - `read:servicedesk-request` - Read service management requests
 - `write:servicedesk-request` - Create and update service management requests  
 - `manage:servicedesk-customer` - Manage service desk customers and participants
+- `read:knowledgebase:jira-service-management` - Search knowledge base articles
 
 #### User Identity API Scopes
 Navigate to **Permissions** → **User identity API** and add:
@@ -84,7 +85,7 @@ After installing the app:
 
 ### 5. Scope Configuration Summary
 
-**Minimal Required (11 scopes):**
+**Minimal Required (12 scopes):**
 ```
 read:jira-work
 read:jira-user  
@@ -95,6 +96,7 @@ write:page:confluence
 read:servicedesk-request
 write:servicedesk-request
 manage:servicedesk-customer
+read:knowledgebase:jira-service-management
 read:me
 offline_access
 ```
@@ -470,10 +472,10 @@ python tests/test_functionality.py
 
 This MCP server uses **minimal required scopes** following the principle of least privilege:
 
-### Essential Scopes (11 total)
+### Essential Scopes (12 total)
 - **Jira**: `read:jira-work`, `read:jira-user`, `write:jira-work`
 - **Confluence**: `read:page:confluence`, `read:space:confluence`, `write:page:confluence`
-- **Service Management**: `read:servicedesk-request`, `write:servicedesk-request`, `manage:servicedesk-customer`
+- **Service Management**: `read:servicedesk-request`, `write:servicedesk-request`, `manage:servicedesk-customer`, `read:knowledgebase:jira-service-management`
 - **Core**: `read:me`, `offline_access`
 
 ### Optional Scopes (add only if needed)
