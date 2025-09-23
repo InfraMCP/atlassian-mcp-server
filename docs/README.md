@@ -1,6 +1,6 @@
 # Atlassian MCP Server API Documentation
 
-This directory contains comprehensive API documentation for all Atlassian Cloud APIs used by the MCP Server.
+This directory contains comprehensive API documentation for all Atlassian Cloud APIs for use in developing the Atlassian MCP server.  
 
 ## Documentation Structure
 
@@ -34,7 +34,15 @@ docs/
 │   ├── version-api.md                 # Content version history
 │   └── whiteboard-api.md              # Visual collaboration
 ├── jira/                              # Jira Platform API documentation
-│   └── issues-api.md                   # Issues API (search, CRUD, comments)
+│   ├── attachments-api.md              # File attachments management
+│   ├── comments-api.md                 # Comments and threading
+│   ├── dashboards-api.md               # Dashboards and gadgets management
+│   ├── fields-api.md                   # Custom fields and contexts
+│   ├── issues-api.md                   # Issues API (search, CRUD, comments)
+│   ├── projects-api.md                 # Project management and discovery
+│   ├── search-api.md                   # JQL search and autocomplete
+│   ├── security-api.md                 # Issue security schemes and levels
+│   └── users-api.md                    # User management and search
 └── service-desk/                      # Jira Service Management API documentation
     ├── assets-api.md                   # Assets workspace management
     ├── customer-api.md                 # Customer management
@@ -79,6 +87,46 @@ docs/
   - Update issue fields and metadata
   - Add comments with rich formatting
   - Project integration for context
+- **Projects API** - Project management and discovery
+  - Project search and filtering capabilities
+  - Project details and metadata access
+  - Component and version management
+  - Project roles and permissions
+- **Search API** - JQL search and autocomplete
+  - Advanced JQL query execution
+  - Search autocomplete and suggestions
+  - Query parsing and validation
+  - Result pagination and filtering
+- **Users API** - User management and search
+  - User search and discovery
+  - User profile information
+  - Assignable user queries
+  - Permission-based user filtering
+- **Comments API** - Comments and threading
+  - Comment CRUD operations
+  - Comment properties and metadata
+  - Bulk comment operations
+  - Comment visibility and permissions
+- **Attachments API** - File attachments management
+  - File upload and download
+  - Attachment metadata and properties
+  - Attachment search and filtering
+  - File type validation and limits
+- **Fields API** - Custom fields and contexts
+  - Custom field management
+  - Field contexts and configurations
+  - Field options and values
+  - Field schema definitions
+- **Dashboards API** - Dashboard and gadget management
+  - Dashboard CRUD operations with sharing permissions
+  - Gadget management and positioning
+  - Dashboard search and bulk operations
+  - Dashboard item properties for custom configuration
+- **Security API** - Issue security schemes and levels
+  - Security scheme management and configuration
+  - Security level creation and member management
+  - Project security associations
+  - User, group, and role-based security controls
 
 ### Jira Service Management API (Complete Coverage)
 - **Assets API** - Assets workspace access and management
