@@ -313,9 +313,13 @@ class AtlassianClient:
             # Enhanced error handling for Service Management endpoints
             if response.status_code == 404 and '/servicedeskapi/' in url:
                 if '/request/' in url:
-                    raise ValueError("Service desk request not found. This may be a regular Jira issue (not a service desk request) or the Service Management feature may not be enabled on this Atlassian instance.")
+                    raise ValueError("Service desk request not found. This may be: 1) A regular Jira issue (not a service desk request), 2) Missing OAuth scopes (try re-authenticating with authenticate_atlassian()), or 3) Insufficient permissions for Service Management.")
                 else:
-                    raise ValueError("Service desk not found. Jira Service Management may not be configured or enabled on this Atlassian instance.")
+                    raise ValueError("Service desk endpoint not found. This may be due to missing OAuth scopes. Try re-authenticating with authenticate_atlassian() to get the latest Service Management permissions.")
+            
+            # Handle other permission-related errors
+            if response.status_code == 403 and '/servicedeskapi/' in url:
+                raise ValueError("Access denied to Service Management. You may need to re-authenticate with authenticate_atlassian() to get the required OAuth scopes, or your user may lack Service Management permissions.")
             
             response.raise_for_status()
             return response
@@ -729,7 +733,8 @@ class AtlassianClient:
                 "available": True,
                 "service_desk_count": len(service_desks),
                 "service_desks": service_desks,
-                "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured."
+                "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured.",
+                "note": "If other servicedesk_ tools fail with 404 errors, you may need to re-authenticate with: authenticate_atlassian()"
             }
         except Exception as e:
             return {
