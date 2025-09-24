@@ -41,7 +41,7 @@ jobs:
         pip-audit --format=json --output=audit-report.json || true
     
     - name: Upload dependency reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dependency-reports
         path: |
