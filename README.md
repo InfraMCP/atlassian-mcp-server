@@ -361,7 +361,6 @@ Then use in configurations:
 #### Enhanced Search & Discovery
 - `confluence_search_content(query, limit=25, space_id=None)` - Advanced content search
 - `confluence_get_page_children(page_id, limit=25)` - Get child pages
-- `confluence_get_page_ancestors(page_id)` - Get page hierarchy (breadcrumbs)
 
 #### Comments & Collaboration
 - `confluence_get_page_comments(page_id, limit=25)` - Get page comments

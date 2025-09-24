@@ -744,13 +744,6 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
     
-    async def confluence_get_page_ancestors(self, page_id: str) -> List[Dict[str, Any]]:
-        """Get ancestor pages (breadcrumb trail) for a specific page."""
-        cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/ancestors"
-        
-        response = await self.make_request("GET", url)
-        return response.json().get("results", [])
     
     # Phase 3: Comments & Collaboration
     async def confluence_get_page_comments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
@@ -1462,18 +1455,6 @@ async def confluence_get_page_children(page_id: str, limit: int = 25) -> List[Di
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.confluence_get_page_children(page_id, limit)
-
-
-@mcp.tool()
-async def confluence_get_page_ancestors(page_id: str) -> List[Dict[str, Any]]:
-    """Get ancestor pages (breadcrumb trail) for a specific Confluence page.
-    
-    Args:
-        page_id: ID of the page to get ancestors for
-    """
-    if not atlassian_client or not atlassian_client.config.access_token:
-        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.confluence_get_page_ancestors(page_id)
 
 
 # Phase 3: Comments & Collaboration Tools
