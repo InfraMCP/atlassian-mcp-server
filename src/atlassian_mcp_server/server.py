@@ -1220,6 +1220,8 @@ class AtlassianClient:
                 "url": url,
                 "status_code": getattr(e, 'response', {}).get('status_code', 'unknown')
             }
+    
+    async def servicedesk_check_availability(self) -> Dict[str, Any]:
         """Check if Jira Service Management is available and configured"""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
