@@ -160,10 +160,14 @@ class AtlassianClient:
                 "read:jira-user",                    # Read user info
                 "write:jira-work",                   # Create/update issues
                 
-                # Confluence - Granular scopes for v2 API compatibility
+                # Confluence - Enhanced scopes for full functionality
                 "read:page:confluence",              # Read pages (replaces read:confluence-content.all)
                 "read:space:confluence",             # Read space info (replaces read:confluence-space.summary)
                 "write:page:confluence",             # Create/update pages (replaces write:confluence-content)
+                "read:comment:confluence",           # Read comments
+                "write:comment:confluence",          # Create comments
+                "read:label:confluence",             # Read labels
+                "read:attachment:confluence",        # Read attachments
                 
                 # Service Management - Classic scopes (not granular)
                 "read:servicedesk-request",          # Read service desk requests
@@ -679,6 +683,191 @@ class AtlassianClient:
         response = await self.make_request("PUT", url, json=data)
         return response.json()
     
+    # Phase 1: Space Management
+    async def confluence_list_spaces(self, limit: int = 25, space_type: Optional[str] = None, status: str = "current") -> List[Dict[str, Any]]:
+        """List Confluence spaces with filtering options."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
+        
+        params = {"limit": limit, "status": status}
+        if space_type:
+            params["type"] = space_type
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_get_space(self, space_id: str, include_icon: bool = False) -> Dict[str, Any]:
+        """Get detailed information about a specific space."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces/{space_id}"
+        
+        params = {"include-icon": include_icon}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json()
+    
+    async def confluence_get_space_pages(self, space_id: str, limit: int = 25, status: str = "current") -> List[Dict[str, Any]]:
+        """Get pages in a specific space."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+        
+        params = {
+            "space-id": space_id,
+            "limit": limit,
+            "status": status,
+            "body-format": "storage"
+        }
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    # Phase 2: Enhanced Search & Discovery
+    async def confluence_search_content(self, query: str, limit: int = 25, space_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Advanced search across Confluence content."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+        
+        params = {"title": query, "limit": limit, "body-format": "storage"}
+        if space_id:
+            params["space-id"] = space_id
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_get_page_children(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Get child pages of a specific page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/children"
+        
+        params = {"limit": limit, "body-format": "storage"}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_get_page_ancestors(self, page_id: str) -> List[Dict[str, Any]]:
+        """Get ancestor pages (breadcrumb trail) for a specific page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/ancestors"
+        
+        response = await self.make_request("GET", url)
+        return response.json().get("results", [])
+    
+    # Phase 3: Comments & Collaboration
+    async def confluence_get_page_comments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Get comments for a specific page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments"
+        
+        params = {
+            "page-id": page_id,
+            "limit": limit,
+            "body-format": "storage"
+        }
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_add_comment(self, page_id: str, comment: str, parent_comment_id: Optional[str] = None) -> Dict[str, Any]:
+        """Add a comment to a page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments"
+        
+        data = {
+            "pageId": page_id,
+            "body": {
+                "representation": "storage",
+                "value": comment
+            }
+        }
+        
+        if parent_comment_id:
+            data["parentCommentId"] = parent_comment_id
+        
+        response = await self.make_request("POST", url, json=data)
+        return response.json()
+    
+    async def confluence_get_comment(self, comment_id: str) -> Dict[str, Any]:
+        """Get a specific comment by ID."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments/{comment_id}"
+        
+        params = {"body-format": "storage"}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json()
+    
+    # Phase 4: Labels & Organization
+    async def confluence_get_page_labels(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Get labels for a specific page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/labels"
+        
+        params = {"limit": limit}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_search_by_label(self, label_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Find pages with a specific label."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/labels/{label_id}/pages"
+        
+        params = {"limit": limit, "body-format": "storage"}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_list_labels(self, limit: int = 25, prefix: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all labels with optional filtering."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/labels"
+        
+        params = {"limit": limit}
+        if prefix:
+            params["prefix"] = prefix
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    # Phase 5: Attachments
+    async def confluence_get_page_attachments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Get attachments for a specific page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/attachments"
+        
+        params = {"limit": limit}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_get_attachment(self, attachment_id: str) -> Dict[str, Any]:
+        """Get details of a specific attachment."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/attachments/{attachment_id}"
+        
+        response = await self.make_request("GET", url)
+        return response.json()
+    
+    # Phase 6: Version History
+    async def confluence_get_page_versions(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+        """Get version history for a page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/versions"
+        
+        params = {"limit": limit, "body-format": "storage"}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("results", [])
+    
+    async def confluence_get_page_version(self, page_id: str, version_number: int) -> Dict[str, Any]:
+        """Get a specific version of a page."""
+        cloud_id = await self.get_cloud_id()
+        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/versions/{version_number}"
+        
+        params = {"body-format": "storage"}
+        
+        response = await self.make_request("GET", url, params=params)
+        return response.json()    
     # Service Management Methods
     
     # Phase 2: Critical Missing Tools - Service Desk Discovery
@@ -1203,6 +1392,221 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.confluence_update_page(page_id, title, content, version)
+
+
+# Phase 1: Space Management Tools
+@mcp.tool()
+async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = None, status: str = "current") -> List[Dict[str, Any]]:
+    """List Confluence spaces.
+    
+    Args:
+        limit: Maximum number of spaces to return (1-250, default: 25)
+        space_type: Filter by type: 'global', 'collaboration', 'knowledge_base', 'personal'
+        status: Filter by status: 'current', 'archived' (default: 'current')
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_list_spaces(limit, space_type, status)
+
+
+@mcp.tool()
+async def confluence_get_space(space_id: str, include_icon: bool = False) -> Dict[str, Any]:
+    """Get detailed information about a specific Confluence space.
+    
+    Args:
+        space_id: ID of the space to retrieve
+        include_icon: Whether to include space icon data
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_space(space_id, include_icon)
+
+
+@mcp.tool()
+async def confluence_get_space_pages(space_id: str, limit: int = 25, status: str = "current") -> List[Dict[str, Any]]:
+    """Get pages in a specific Confluence space.
+    
+    Args:
+        space_id: ID of the space to get pages from
+        limit: Maximum number of pages to return (1-250, default: 25)
+        status: Filter by status: 'current', 'archived' (default: 'current')
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_space_pages(space_id, limit, status)
+
+
+# Phase 2: Enhanced Search & Discovery Tools
+@mcp.tool()
+async def confluence_search_content(query: str, limit: int = 25, space_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    """Advanced search across Confluence content.
+    
+    Args:
+        query: Search term to find in page titles and content
+        limit: Maximum number of results to return (1-250, default: 25)
+        space_id: Optional space ID to limit search to specific space
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_search_content(query, limit, space_id)
+
+
+@mcp.tool()
+async def confluence_get_page_children(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    """Get child pages of a specific Confluence page.
+    
+    Args:
+        page_id: ID of the parent page
+        limit: Maximum number of child pages to return (1-250, default: 25)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_children(page_id, limit)
+
+
+@mcp.tool()
+async def confluence_get_page_ancestors(page_id: str) -> List[Dict[str, Any]]:
+    """Get ancestor pages (breadcrumb trail) for a specific Confluence page.
+    
+    Args:
+        page_id: ID of the page to get ancestors for
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_ancestors(page_id)
+
+
+# Phase 3: Comments & Collaboration Tools
+@mcp.tool()
+async def confluence_get_page_comments(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    """Get comments for a specific Confluence page.
+    
+    Args:
+        page_id: ID of the page to get comments for
+        limit: Maximum number of comments to return (1-250, default: 25)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_comments(page_id, limit)
+
+
+@mcp.tool()
+async def confluence_add_comment(page_id: str, comment: str, parent_comment_id: Optional[str] = None) -> Dict[str, Any]:
+    """Add a comment to a Confluence page.
+    
+    Args:
+        page_id: ID of the page to comment on
+        comment: Comment text (HTML/storage format)
+        parent_comment_id: Optional ID of parent comment for replies
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_add_comment(page_id, comment, parent_comment_id)
+
+
+@mcp.tool()
+async def confluence_get_comment(comment_id: str) -> Dict[str, Any]:
+    """Get a specific Confluence comment by ID.
+    
+    Args:
+        comment_id: ID of the comment to retrieve
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_comment(comment_id)
+
+
+# Phase 4: Labels & Organization Tools
+@mcp.tool()
+async def confluence_get_page_labels(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    """Get labels for a specific Confluence page.
+    
+    Args:
+        page_id: ID of the page to get labels for
+        limit: Maximum number of labels to return (1-250, default: 25)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_labels(page_id, limit)
+
+
+@mcp.tool()
+async def confluence_search_by_label(label_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    """Find Confluence pages with a specific label.
+    
+    Args:
+        label_id: ID of the label to search for
+        limit: Maximum number of pages to return (1-250, default: 25)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_search_by_label(label_id, limit)
+
+
+@mcp.tool()
+async def confluence_list_labels(limit: int = 25, prefix: Optional[str] = None) -> List[Dict[str, Any]]:
+    """List all Confluence labels with optional filtering.
+    
+    Args:
+        limit: Maximum number of labels to return (1-250, default: 25)
+        prefix: Optional prefix to filter labels by ('my', 'team', 'global', 'system')
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_list_labels(limit, prefix)
+
+
+# Phase 5: Attachments Tools
+@mcp.tool()
+async def confluence_get_page_attachments(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    """Get attachments for a specific Confluence page.
+    
+    Args:
+        page_id: ID of the page to get attachments for
+        limit: Maximum number of attachments to return (1-250, default: 25)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_attachments(page_id, limit)
+
+
+@mcp.tool()
+async def confluence_get_attachment(attachment_id: str) -> Dict[str, Any]:
+    """Get details of a specific Confluence attachment.
+    
+    Args:
+        attachment_id: ID of the attachment to retrieve
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_attachment(attachment_id)
+
+
+# Phase 6: Version History Tools
+@mcp.tool()
+async def confluence_get_page_versions(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    """Get version history for a Confluence page.
+    
+    Args:
+        page_id: ID of the page to get version history for
+        limit: Maximum number of versions to return (1-250, default: 25)
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_versions(page_id, limit)
+
+
+@mcp.tool()
+async def confluence_get_page_version(page_id: str, version_number: int) -> Dict[str, Any]:
+    """Get a specific version of a Confluence page.
+    
+    Args:
+        page_id: ID of the page
+        version_number: Version number to retrieve
+    """
+    if not atlassian_client or not atlassian_client.config.access_token:
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+    return await atlassian_client.confluence_get_page_version(page_id, version_number)
 
 
 @mcp.tool()
