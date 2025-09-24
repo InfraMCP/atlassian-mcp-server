@@ -1205,7 +1205,7 @@ class AtlassianClient:
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/{endpoint}"
         
         try:
-            response = await self.client.request("GET", url, headers=await self.get_headers())
+            response = await self.make_request("GET", url)
             return {
                 "success": True,
                 "status_code": response.status_code,
@@ -1784,7 +1784,6 @@ async def servicedesk_get_service_desk(service_desk_id: str) -> Dict[str, Any]:
     return await atlassian_client.servicedesk_get_service_desk(service_desk_id)
 
 
-@mcp.tool()
 @mcp.tool()
 @handle_atlassian_errors
 async def servicedesk_list_request_types(service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
