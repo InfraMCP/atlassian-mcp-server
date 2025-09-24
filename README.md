@@ -346,10 +346,39 @@ Then use in configurations:
 - `jira_add_comment(issue_key, comment)` - Add comment to issue
 
 ### Confluence Operations
+
+#### Core Content Management
 - `confluence_search(query, limit=10)` - Search Confluence content
 - `confluence_get_page(page_id)` - Get specific page content
 - `confluence_create_page(space_key, title, content, parent_id=None)` - Create new Confluence page
 - `confluence_update_page(page_id, title, content, version)` - Update existing Confluence page
+
+#### Space Management
+- `confluence_list_spaces(limit=25, space_type=None, status="current")` - List available spaces
+- `confluence_get_space(space_id, include_icon=False)` - Get detailed space information
+- `confluence_get_space_pages(space_id, limit=25, status="current")` - Get pages in a space
+
+#### Enhanced Search & Discovery
+- `confluence_search_content(query, limit=25, space_id=None)` - Advanced content search
+- `confluence_get_page_children(page_id, limit=25)` - Get child pages
+
+#### Comments & Collaboration
+- `confluence_get_page_comments(page_id, limit=25)` - Get page comments
+- `confluence_add_comment(page_id, comment, parent_comment_id=None)` - Add comment to page
+- `confluence_get_comment(comment_id)` - Get specific comment details
+
+#### Labels & Organization
+- `confluence_get_page_labels(page_id, limit=25)` - Get labels for a page
+- `confluence_search_by_label(label_id, limit=25)` - Find pages with specific label
+- `confluence_list_labels(limit=25, prefix=None)` - List all available labels
+
+#### Attachments
+- `confluence_get_page_attachments(page_id, limit=25)` - Get page attachments
+- `confluence_get_attachment(attachment_id)` - Get attachment details
+
+#### Version History
+- `confluence_get_page_versions(page_id, limit=25)` - Get page version history
+- `confluence_get_page_version(page_id, version_number)` - Get specific page version
 
 ### Service Management Operations
 
