@@ -1,0 +1,12 @@
+atlassian-mcp-server @ file:///Users/rory.mcmahon/code/github/rorymcmahon/atlassian-mcp-server
+-e git+https://github.com/rorymcmahon/falcon-mcp.git@eb62342541a63f21f5b75e547f934d28a6c937fd#egg=falcon_mcp
+fastmcp==2.10.5
+foreman-mcp-server @ git+https://github.com/rorymcmahon/foreman-mcp-server.git@48395efb8cbcae42dae92fccd7f27417e7e9c64a
+httpx==0.28.1
+httpx-sse==0.4.1
+mcp==1.14.1
+openapi-pydantic==0.5.1
+pydantic==2.11.9
+pydantic-settings==2.10.1
+pydantic_core==2.33.2
+-e git+https://github.com/rorymcmahon/ssh-mcp-server.git@beb3d902e1b616ebfd0e16472dd7459c0212ca0a#egg=ssh_mcp_server

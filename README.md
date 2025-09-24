@@ -447,6 +447,37 @@ This MCP server uses **granular scopes** for Confluence operations to ensure com
 
 If you previously configured classic scopes, you'll need to update your OAuth app to use granular scopes and re-authenticate to get fresh tokens.
 
+## Supply Chain Security
+
+This project implements comprehensive supply chain security measures:
+
+### Dependency Management
+- **Pinned Versions**: All dependencies use exact version pins to prevent unexpected updates
+- **Security Scanning**: Automated vulnerability scanning with Safety and pip-audit
+- **Dependency Tracking**: Complete dependency documentation in `docs/DEPENDENCIES.md`
+- **Regular Updates**: Weekly automated security checks via GitHub Actions
+
+### Security Tools
+```bash
+# Generate dependency report
+python3 scripts/generate_dependency_report.py
+
+# Check for vulnerabilities
+pip3 install safety pip-audit
+safety check
+pip-audit
+
+# Update dependencies safely
+python3 scripts/update_dependencies.py
+```
+
+### Files
+- `requirements.txt` - Pinned production dependencies
+- `docs/DEPENDENCIES.md` - Human-readable dependency report
+- `docs/dependency-report.json` - Machine-readable dependency data
+- `SECURITY.md` - Security policy and vulnerability response
+- `.github/workflows/dependency-security.yml` - Automated security checks
+
 ## Development
 
 The server is built using:

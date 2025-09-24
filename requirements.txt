@@ -1,0 +1,19 @@
+# Core dependencies with pinned versions for supply chain security
+# Generated on 2025-09-24 - Review and update regularly
+
+# MCP Framework
+mcp==1.14.1
+
+# HTTP Client
+httpx==0.28.1
+
+# Data Validation
+pydantic==2.11.9
+pydantic-settings==2.10.1
+
+# Development dependencies (optional)
+# Uncomment for development environment
+# pytest==8.3.3
+# pytest-asyncio==0.24.0
+# black==24.8.0
+# isort==5.13.2
