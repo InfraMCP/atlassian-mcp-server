@@ -1247,7 +1247,11 @@ class AtlassianClient:
 
         response = await self.make_request(
             "GET", url,
-            operation_context={"name": "servicedesk_get_sla_metric", "issue_key": issue_key, "sla_metric_id": sla_metric_id}
+            operation_context={
+                "name": "servicedesk_get_sla_metric", 
+                "issue_key": issue_key, 
+                "sla_metric_id": sla_metric_id
+            }
         )
         return response.json()
 
@@ -1317,7 +1321,8 @@ class AtlassianClient:
                 "available": True,
                 "service_desk_count": len(service_desks),
                 "service_desks": service_desks,
-                "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured.",
+                "message": (f"Jira Service Management is available with "
+                           f"{len(service_desks)} service desk(s) configured."),
                 "note": ("If other servicedesk_ tools fail with 404 errors, you may need to "
                          "re-authenticate with: authenticate_atlassian()")
             }
@@ -1976,7 +1981,9 @@ async def servicedesk_get_request_transitions(issue_key: str) -> List[Dict[str, 
         # Use transitions[0]["id"] with servicedesk_transition_request()
     """
     if not atlassian_client or not atlassian_client.config.access_token:
-        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+        raise ValueError(
+            "Not authenticated. Use authenticate_atlassian tool first."
+        )
     return await atlassian_client.servicedesk_get_request_transitions(issue_key)
 
 
