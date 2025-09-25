@@ -1,7 +1,7 @@
 # Atlassian MCP Server
 
 [![PyPI version](https://badge.fury.io/py/atlassian-mcp-server.svg)](https://badge.fury.io/py/atlassian-mcp-server)
-[![Python Support](https://img.shields.io/pypi/pyversions/atlassian-mcp-server.svg)](https://pypi.org/project/atlassian-mcp-server/)
+[![Python Support](https://img.shields.io/pypi/pyversions/atlassian-mcp-server.svg?v=0.3.4)](https://pypi.org/project/atlassian-mcp-server/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code Quality](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/pylint.yml/badge.svg)](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/pylint.yml)
 [![Dependency Security](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/dependency-security.yml/badge.svg)](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/dependency-security.yml)
@@ -9,12 +9,6 @@
 [![GitHub stars](https://img.shields.io/github/stars/rorymcmahon/atlassian-mcp-server.svg)](https://github.com/rorymcmahon/atlassian-mcp-server/stargazers)
 
 MCP server for Atlassian Cloud (Confluence & Jira) with seamless OAuth 2.0 authentication. This server enables AI agents to help users document work in Confluence, manage Jira issues, and understand project context.
-
-## Recent Updates
-
-See [CHANGELOG.md](CHANGELOG.md) for detailed version history and recent changes.
-
-**Latest**: v0.3.3 includes critical URL protocol fix and 10.00/10 pylint rating.
 
 ## Features
 
