@@ -2,6 +2,12 @@
 
 MCP server for Atlassian Cloud (Confluence & Jira) with seamless OAuth 2.0 authentication. This server enables AI agents to help users document work in Confluence, manage Jira issues, and understand project context.
 
+## Recent Updates
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed version history and recent changes.
+
+**Latest**: v0.3.3 includes critical URL protocol fix and 10.00/10 pylint rating.
+
 ## Features
 
 - **Seamless OAuth 2.0 Flow**: Automatic browser-based authentication with PKCE security
