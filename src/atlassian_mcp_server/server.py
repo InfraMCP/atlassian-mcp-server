@@ -401,7 +401,7 @@ class AtlassianClient:
                         "User may lack Service Management permissions",
                         "OAuth scopes may be insufficient"
                     ],
-                    suggested_actions=["authenticate_atlassian()", 
+                    suggested_actions=["authenticate_atlassian()",
                                       "Contact Atlassian administrator"]
                 )
 
@@ -412,7 +412,7 @@ class AtlassianClient:
                 raise AtlassianError(
                     f"HTTP {response.status_code}: {response.text}",
                     f"HTTP_{response.status_code}",
-                    context={"operation": operation_name, "url": url, 
+                    context={"operation": operation_name, "url": url,
                             "status_code": response.status_code},
                     troubleshooting=[f"Server returned {response.status_code} error"],
                     suggested_actions=["Check request parameters", "Verify permissions"]
@@ -667,7 +667,7 @@ class AtlassianClient:
                         "request_data": data,
                         "space_id": space_id,
                         "access_token_present": bool(self.config.access_token),
-                        "access_token_length": (len(self.config.access_token) 
+                        "access_token_length": (len(self.config.access_token)
                                                if self.config.access_token else 0),
                         "refresh_token_present": bool(self.config.refresh_token),
                         "site_url": self.config.site_url
@@ -699,7 +699,7 @@ class AtlassianClient:
                         cloud_id_debug if 'cloud_id_debug' in locals()
                         else "Failed before cloud ID selection"
                     ),
-                    "accessible_resources": (resources_data if 'resources_data' in locals() 
+                    "accessible_resources": (resources_data if 'resources_data' in locals()
                                             else "Failed to retrieve"),
                     "cloud_id": cloud_id if 'cloud_id' in locals() else "Failed to retrieve"
                 }
@@ -752,7 +752,7 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json()
 
-    async def confluence_get_space_pages(self, space_id: str, limit: int = 25, 
+    async def confluence_get_space_pages(self, space_id: str, limit: int = 25,
                                         status: str = "current") -> List[Dict[str, Any]]:
         """Get pages in a specific space."""
         cloud_id = await self.get_cloud_id()
@@ -1015,7 +1015,7 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json()
 
-    async def servicedesk_get_request_type_fields(self, service_desk_id: str, 
+    async def servicedesk_get_request_type_fields(self, service_desk_id: str,
                                                  request_type_id: str) -> List[Dict[str, Any]]:
         """Get required and optional fields for a specific request type.
 
@@ -1104,8 +1104,8 @@ class AtlassianClient:
 
         response = await self.make_request(
             "GET", url, params=params,
-            operation_context={"name": "servicedesk_get_requests", 
-                              "service_desk_id": service_desk_id, 
+            operation_context={"name": "servicedesk_get_requests",
+                              "service_desk_id": service_desk_id,
                               "limit": limit, "start": start}
         )
         return response.json().get("values", [])
@@ -1267,7 +1267,7 @@ class AtlassianClient:
 
         response = await self.make_request(
             "GET", url, params=params,
-            operation_context={"name": "servicedesk_search_knowledge_base", 
+            operation_context={"name": "servicedesk_search_knowledge_base",
                               "query": query, "service_desk_id": service_desk_id}
         )
         return response.json().get("values", [])
@@ -1395,7 +1395,7 @@ async def jira_create_issue(project_key: str, summary: str, description: str, is
 
 
 @mcp.tool()
-async def jira_update_issue(issue_key: str, summary: Optional[str] = None, 
+async def jira_update_issue(issue_key: str, summary: Optional[str] = None,
                            description: Optional[str] = None) -> Dict[str, Any]:
     """Update an existing Jira issue."""
     if not atlassian_client or not atlassian_client.config.access_token:
@@ -1433,7 +1433,7 @@ async def confluence_get_page(page_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def confluence_create_page(space_key: str, title: str, content: str, 
+async def confluence_create_page(space_key: str, title: str, content: str,
                                 parent_id: Optional[str] = None) -> Dict[str, Any]:
     """Create a new Confluence page.
 
@@ -2077,18 +2077,6 @@ async def initialize_client():
     )
 
     return AtlassianClient(config)
-
-    # Try to load existing credentials
-    if atlassian_client.load_credentials():
-        print("✅ Loaded existing Atlassian credentials")
-        try:
-            # Test credentials
-            await atlassian_client.get_headers()
-            print("✅ Credentials are valid")
-        except (ValueError, httpx.HTTPError):
-            print("⚠️ Stored credentials are invalid. Use authenticate_atlassian tool to re-authenticate.")
-    else:
-        print("🔐 No existing credentials found. Use authenticate_atlassian tool to authenticate.")
 
 
 def main():
