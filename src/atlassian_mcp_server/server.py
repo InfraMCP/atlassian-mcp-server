@@ -485,7 +485,8 @@ class AtlassianClient:
         cloud_id = await self.get_cloud_id()
 
         # First get valid issue types for the project
-        project_url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/project/{project_key}"
+        project_url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/"
+                       f"rest/api/3/project/{project_key}")
         project_response = await self.make_request("GET", project_url)
         project_data = project_response.json()
 
@@ -666,7 +667,8 @@ class AtlassianClient:
                         "request_data": data,
                         "space_id": space_id,
                         "access_token_present": bool(self.config.access_token),
-                        "access_token_length": len(self.config.access_token) if self.config.access_token else 0,
+                        "access_token_length": (len(self.config.access_token) 
+                                               if self.config.access_token else 0),
                         "refresh_token_present": bool(self.config.refresh_token),
                         "site_url": self.config.site_url
                     }
@@ -697,7 +699,8 @@ class AtlassianClient:
                         cloud_id_debug if 'cloud_id_debug' in locals()
                         else "Failed before cloud ID selection"
                     ),
-                    "accessible_resources": resources_data if 'resources_data' in locals() else "Failed to retrieve",
+                    "accessible_resources": (resources_data if 'resources_data' in locals() 
+                                            else "Failed to retrieve"),
                     "cloud_id": cloud_id if 'cloud_id' in locals() else "Failed to retrieve"
                 }
             }
