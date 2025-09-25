@@ -60,6 +60,7 @@ class AtlassianError(Exception):
         self.suggested_actions = suggested_actions or []
 
     def to_dict(self) -> Dict[str, Any]:
+        """Convert error to dictionary format for JSON serialization."""
         return {
             "success": False,
             "error": str(self),
@@ -74,6 +75,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
     """Handle OAuth callback automatically."""
 
     def do_GET(self):
+        """Handle GET requests for OAuth callback."""
         if self.path.startswith('/callback'):
             parsed = urlparse(self.path)
             query_params = parse_qs(parsed.query)
@@ -158,7 +160,7 @@ class AtlassianClient:
 
         try:
             # Generate PKCE
-            _, code_challenge = self.generate_pkce()
+            code_verifier, code_challenge = self.generate_pkce()
             state = secrets.token_urlsafe(32)
 
             # Minimal required scopes for MCP functionality
@@ -194,7 +196,9 @@ class AtlassianClient:
                 "redirect_uri": "http://localhost:8080/callback",
                 "state": state,
                 "response_type": "code",
-                "prompt": "consent"
+                "prompt": "consent",
+                "code_challenge": code_challenge,
+                "code_challenge_method": "S256"
             }
 
             auth_url = f"https://auth.atlassian.com/authorize?{urlencode(params)}"
@@ -263,7 +267,7 @@ class AtlassianClient:
             "client_secret": self.config.client_secret
         }
 
-        with open(self.credentials_file, 'w') as f:
+        with open(self.credentials_file, 'w', encoding='utf-8') as f:
             json.dump(credentials, f, indent=2)
         self.credentials_file.chmod(0o600)
 
@@ -273,7 +277,7 @@ class AtlassianClient:
             return False
 
         try:
-            with open(self.credentials_file, 'r') as f:
+            with open(self.credentials_file, 'r', encoding='utf-8') as f:
                 creds = json.load(f)
 
             self.config.access_token = creds.get("access_token")
