@@ -752,7 +752,8 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json()
 
-    async def confluence_get_space_pages(self, space_id: str, limit: int = 25, status: str = "current") -> List[Dict[str, Any]]:
+    async def confluence_get_space_pages(self, space_id: str, limit: int = 25, 
+                                        status: str = "current") -> List[Dict[str, Any]]:
         """Get pages in a specific space."""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
@@ -905,7 +906,8 @@ class AtlassianClient:
     async def confluence_get_page_version(self, page_id: str, version_number: int) -> Dict[str, Any]:
         """Get a specific version of a page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/versions/{version_number}"
+        url = (f"https://api.atlassian.com/ex/confluence/{cloud_id}/"
+               f"wiki/api/v2/pages/{page_id}/versions/{version_number}")
 
         params = {"body-format": "storage"}
 
@@ -987,7 +989,8 @@ class AtlassianClient:
         cloud_id = await self.get_cloud_id()
 
         if service_desk_id:
-            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype"
+            url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/"
+                   f"rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype")
         else:
             url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/requesttype"
 
@@ -1012,7 +1015,8 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json()
 
-    async def servicedesk_get_request_type_fields(self, service_desk_id: str, request_type_id: str) -> List[Dict[str, Any]]:
+    async def servicedesk_get_request_type_fields(self, service_desk_id: str, 
+                                                 request_type_id: str) -> List[Dict[str, Any]]:
         """Get required and optional fields for a specific request type.
 
         Essential for understanding what fields are needed when creating requests.
@@ -1100,7 +1104,9 @@ class AtlassianClient:
 
         response = await self.make_request(
             "GET", url, params=params,
-            operation_context={"name": "servicedesk_get_requests", "service_desk_id": service_desk_id, "limit": limit, "start": start}
+            operation_context={"name": "servicedesk_get_requests", 
+                              "service_desk_id": service_desk_id, 
+                              "limit": limit, "start": start}
         )
         return response.json().get("values", [])
 
@@ -1261,7 +1267,8 @@ class AtlassianClient:
 
         response = await self.make_request(
             "GET", url, params=params,
-            operation_context={"name": "servicedesk_search_knowledge_base", "query": query, "service_desk_id": service_desk_id}
+            operation_context={"name": "servicedesk_search_knowledge_base", 
+                              "query": query, "service_desk_id": service_desk_id}
         )
         return response.json().get("values", [])
 
@@ -1388,7 +1395,8 @@ async def jira_create_issue(project_key: str, summary: str, description: str, is
 
 
 @mcp.tool()
-async def jira_update_issue(issue_key: str, summary: Optional[str] = None, description: Optional[str] = None) -> Dict[str, Any]:
+async def jira_update_issue(issue_key: str, summary: Optional[str] = None, 
+                           description: Optional[str] = None) -> Dict[str, Any]:
     """Update an existing Jira issue."""
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
@@ -1425,7 +1433,8 @@ async def confluence_get_page(page_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def confluence_create_page(space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
+async def confluence_create_page(space_key: str, title: str, content: str, 
+                                parent_id: Optional[str] = None) -> Dict[str, Any]:
     """Create a new Confluence page.
 
     Args:
