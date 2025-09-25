@@ -125,6 +125,10 @@ class AtlassianClient:
         self.server = None
         self.server_thread = None
         self.code_verifier = None  # For PKCE OAuth flow
+        
+        # API base URLs to reduce line lengths
+        self.confluence_base = "{self.confluence_base}"
+        self.jira_base = "{self.jira_base}"
 
     def generate_pkce(self):
         """Generate PKCE codes"""
@@ -460,7 +464,7 @@ class AtlassianClient:
     async def jira_search(self, jql: str, max_results: int = 50) -> List[Dict[str, Any]]:
         """Search Jira issues using JQL"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
+        url = f"{self.jira_base}/{cloud_id}/rest/api/3/search"
         data = {
             "jql": jql,
             "maxResults": max_results,
@@ -473,7 +477,7 @@ class AtlassianClient:
     async def jira_get_issue(self, issue_key: str) -> Dict[str, Any]:
         """Get Jira issue details"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{issue_key}"
+        url = f"{self.jira_base}/{cloud_id}/rest/api/3/issue/{issue_key}"
 
         response = await self.make_request("GET", url)
         return response.json()
@@ -485,7 +489,7 @@ class AtlassianClient:
         cloud_id = await self.get_cloud_id()
 
         # First get valid issue types for the project
-        project_url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/"
+        project_url = (f"{self.jira_base}/{cloud_id}/"
                        f"rest/api/3/project/{project_key}")
         project_response = await self.make_request("GET", project_url)
         project_data = project_response.json()
@@ -505,7 +509,7 @@ class AtlassianClient:
         if not issue_type_id:
             raise ValueError(f"No valid issue types found for project {project_key}")
 
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue"
+        url = f"{self.jira_base}/{cloud_id}/rest/api/3/issue"
         data = {
             "fields": {
                 "project": {"key": project_key},
@@ -537,7 +541,7 @@ class AtlassianClient:
     ) -> Dict[str, Any]:
         """Update a Jira issue"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{issue_key}"
+        url = f"{self.jira_base}/{cloud_id}/rest/api/3/issue/{issue_key}"
 
         fields = {}
         if summary:
@@ -566,7 +570,7 @@ class AtlassianClient:
     async def jira_add_comment(self, issue_key: str, comment: str) -> Dict[str, Any]:
         """Add a comment to a Jira issue"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{issue_key}/comment"
+        url = f"{self.jira_base}/{cloud_id}/rest/api/3/issue/{issue_key}/comment"
 
         data = {
             "body": {
@@ -593,7 +597,7 @@ class AtlassianClient:
     async def confluence_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search Confluence content using v2 API"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
         params = {"title": query, "limit": limit, "body-format": "storage"}
 
         response = await self.make_request("GET", url, params=params)
@@ -602,7 +606,7 @@ class AtlassianClient:
     async def confluence_get_page(self, page_id: str) -> Dict[str, Any]:
         """Get Confluence page content"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}"
         params = {"body-format": "storage"}
 
         response = await self.make_request("GET", url, params=params)
@@ -629,14 +633,14 @@ class AtlassianClient:
             }
 
             # Get space ID from space key using v2 API
-            space_url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
+            space_url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces"
             space_response = await self.make_request("GET", space_url, params={"keys": space_key})
             spaces = space_response.json().get("results", [])
             if not spaces:
                 return {"error": f"Space '{space_key}' not found"}
             space_id = spaces[0]["id"]
 
-            url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+            url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
 
             data = {
                 "spaceId": space_id,
@@ -709,7 +713,7 @@ class AtlassianClient:
         """Update an existing Confluence page"""
         # Get cloud ID for resource with Confluence write scope
         cloud_id = await self.get_cloud_id(required_scopes=["write:page:confluence"])
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}"
 
         data = {
             "id": page_id,
@@ -733,7 +737,7 @@ class AtlassianClient:
     ) -> List[Dict[str, Any]]:
         """List Confluence spaces with filtering options."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces"
 
         params = {"limit": limit, "status": status}
         if space_type:
@@ -745,7 +749,7 @@ class AtlassianClient:
     async def confluence_get_space(self, space_id: str, include_icon: bool = False) -> Dict[str, Any]:
         """Get detailed information about a specific space."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces/{space_id}"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces/{space_id}"
 
         params = {"include-icon": include_icon}
 
@@ -756,7 +760,7 @@ class AtlassianClient:
                                         status: str = "current") -> List[Dict[str, Any]]:
         """Get pages in a specific space."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
 
         params = {
             "space-id": space_id,
@@ -774,7 +778,7 @@ class AtlassianClient:
     ) -> List[Dict[str, Any]]:
         """Advanced search across Confluence content."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
 
         params = {"title": query, "limit": limit, "body-format": "storage"}
         if space_id:
@@ -786,7 +790,7 @@ class AtlassianClient:
     async def confluence_get_page_children(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Get child pages of a specific page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/children"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/children"
 
         params = {"limit": limit, "body-format": "storage"}
 
@@ -798,7 +802,7 @@ class AtlassianClient:
     async def confluence_get_page_comments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Get comments for a specific page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/footer-comments"
 
         params = {
             "page-id": page_id,
@@ -814,7 +818,7 @@ class AtlassianClient:
     ) -> Dict[str, Any]:
         """Add a comment to a page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/footer-comments"
 
         data = {
             "pageId": page_id,
@@ -833,7 +837,7 @@ class AtlassianClient:
     async def confluence_get_comment(self, comment_id: str) -> Dict[str, Any]:
         """Get a specific comment by ID."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments/{comment_id}"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/footer-comments/{comment_id}"
 
         params = {"body-format": "storage"}
 
@@ -844,7 +848,7 @@ class AtlassianClient:
     async def confluence_get_page_labels(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Get labels for a specific page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/labels"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/labels"
 
         params = {"limit": limit}
 
@@ -854,7 +858,7 @@ class AtlassianClient:
     async def confluence_search_by_label(self, label_id: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Find pages with a specific label."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/labels/{label_id}/pages"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/labels/{label_id}/pages"
 
         params = {"limit": limit, "body-format": "storage"}
 
@@ -864,7 +868,7 @@ class AtlassianClient:
     async def confluence_list_labels(self, limit: int = 25, prefix: Optional[str] = None) -> List[Dict[str, Any]]:
         """List all labels with optional filtering."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/labels"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/labels"
 
         params = {"limit": limit}
         if prefix:
@@ -877,7 +881,7 @@ class AtlassianClient:
     async def confluence_get_page_attachments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Get attachments for a specific page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/attachments"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/attachments"
 
         params = {"limit": limit}
 
@@ -887,7 +891,7 @@ class AtlassianClient:
     async def confluence_get_attachment(self, attachment_id: str) -> Dict[str, Any]:
         """Get details of a specific attachment."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/attachments/{attachment_id}"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/attachments/{attachment_id}"
 
         response = await self.make_request("GET", url)
         return response.json()
@@ -896,7 +900,7 @@ class AtlassianClient:
     async def confluence_get_page_versions(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
         """Get version history for a page."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages/{page_id}/versions"
+        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/versions"
 
         params = {"limit": limit, "body-format": "storage"}
 
@@ -906,7 +910,7 @@ class AtlassianClient:
     async def confluence_get_page_version(self, page_id: str, version_number: int) -> Dict[str, Any]:
         """Get a specific version of a page."""
         cloud_id = await self.get_cloud_id()
-        url = (f"https://api.atlassian.com/ex/confluence/{cloud_id}/"
+        url = (f"{self.confluence_base}/{cloud_id}/"
                f"wiki/api/v2/pages/{page_id}/versions/{version_number}")
 
         params = {"body-format": "storage"}
@@ -943,7 +947,7 @@ class AtlassianClient:
         logger.debug("servicedesk_list_service_desks: Fetching service desks (limit=%s)", limit)
 
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/servicedesk"
         params = {"limit": limit}
 
         response = await self.make_request(
@@ -965,7 +969,7 @@ class AtlassianClient:
             Service desk object with detailed information
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}"
 
         response = await self.make_request("GET", url)
         return response.json()
@@ -989,10 +993,10 @@ class AtlassianClient:
         cloud_id = await self.get_cloud_id()
 
         if service_desk_id:
-            url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/"
+            url = (f"{self.jira_base}/{cloud_id}/"
                    f"rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype")
         else:
-            url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/requesttype"
+            url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/requesttype"
 
         params = {"limit": limit}
         response = await self.make_request("GET", url, params=params)
@@ -1009,7 +1013,7 @@ class AtlassianClient:
             Request type object with detailed information
         """
         cloud_id = await self.get_cloud_id()
-        url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/"
+        url = (f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
                f"servicedesk/{service_desk_id}/requesttype/{request_type_id}")
 
         response = await self.make_request("GET", url)
@@ -1029,7 +1033,7 @@ class AtlassianClient:
             List of field objects with fieldId, name, required, and other metadata
         """
         cloud_id = await self.get_cloud_id()
-        url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/"
+        url = (f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
                f"servicedesk/{service_desk_id}/requesttype/{request_type_id}/field")
 
         response = await self.make_request("GET", url)
@@ -1047,7 +1051,7 @@ class AtlassianClient:
             List of comment objects with body, author, created date, and visibility
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
         params = {"limit": limit}
 
         response = await self.make_request("GET", url, params=params)
@@ -1063,7 +1067,7 @@ class AtlassianClient:
             List of transition objects with id, name, and to status
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/transition"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/transition"
 
         response = await self.make_request("GET", url)
         return response.json().get("values", [])
@@ -1082,7 +1086,7 @@ class AtlassianClient:
             Success confirmation with transition details
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/transition"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/transition"
 
         data = {"id": transition_id}
         if comment:
@@ -1096,7 +1100,7 @@ class AtlassianClient:
     ) -> List[Dict[str, Any]]:
         """Get service desk requests with enhanced pagination."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request"
 
         params = {"limit": limit, "start": start}
         if service_desk_id:
@@ -1113,7 +1117,7 @@ class AtlassianClient:
     async def servicedesk_get_request(self, issue_key: str) -> Dict[str, Any]:
         """Get specific service desk request details"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}"
 
         response = await self.make_request("GET", url)
         return response.json()
@@ -1123,7 +1127,7 @@ class AtlassianClient:
     ) -> Dict[str, Any]:
         """Create a new service desk request"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request"
 
         data = {
             "serviceDeskId": service_desk_id,
@@ -1147,7 +1151,7 @@ class AtlassianClient:
     async def servicedesk_add_comment(self, issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
         """Add comment to service desk request"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
 
         data = {
             "body": comment,
@@ -1160,7 +1164,7 @@ class AtlassianClient:
     async def servicedesk_get_request_status(self, issue_key: str) -> Dict[str, Any]:
         """Get service desk request status"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/status"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/status"
 
         response = await self.make_request("GET", url)
         return response.json()
@@ -1169,7 +1173,7 @@ class AtlassianClient:
     async def servicedesk_get_approvals(self, issue_key: str) -> List[Dict[str, Any]]:
         """Get approval information for a service desk request"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval"
 
         response = await self.make_request("GET", url)
         return response.json().get("values", [])
@@ -1183,7 +1187,7 @@ class AtlassianClient:
             decision: 'approve' or 'decline'
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval/{approval_id}"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval/{approval_id}"
 
         data = {"decision": decision}
         response = await self.make_request("POST", url, json=data)
@@ -1192,7 +1196,7 @@ class AtlassianClient:
     async def servicedesk_get_participants(self, issue_key: str) -> List[Dict[str, Any]]:
         """Get participants for a service desk request"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
 
         response = await self.make_request("GET", url)
         return response.json().get("values", [])
@@ -1200,7 +1204,7 @@ class AtlassianClient:
     async def servicedesk_add_participants(self, issue_key: str, usernames: List[str]) -> Dict[str, Any]:
         """Add participants to a service desk request"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
 
         data = {"usernames": usernames}
         response = await self.make_request("POST", url, json=data)
@@ -1209,7 +1213,7 @@ class AtlassianClient:
     async def servicedesk_manage_notifications(self, issue_key: str, subscribe: bool) -> Dict[str, Any]:
         """Subscribe or unsubscribe from service desk request notifications"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/notification"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/notification"
 
         if subscribe:
             await self.make_request("PUT", url)
@@ -1222,7 +1226,7 @@ class AtlassianClient:
     async def servicedesk_get_request_sla(self, issue_key: str) -> List[Dict[str, Any]]:
         """Get SLA information for a service desk request."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla"
 
         response = await self.make_request(
             "GET", url,
@@ -1233,7 +1237,7 @@ class AtlassianClient:
     async def servicedesk_get_sla_metric(self, issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
         """Get detailed SLA metric information."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla/{sla_metric_id}"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla/{sla_metric_id}"
 
         response = await self.make_request(
             "GET", url,
@@ -1245,7 +1249,7 @@ class AtlassianClient:
     async def servicedesk_get_request_attachments(self, issue_key: str) -> List[Dict[str, Any]]:
         """Get attachments for a service desk request."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/attachment"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/attachment"
 
         response = await self.make_request(
             "GET", url,
@@ -1259,7 +1263,7 @@ class AtlassianClient:
     ) -> List[Dict[str, Any]]:
         """Search knowledge base articles."""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/knowledgebase/article"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/knowledgebase/article"
 
         params = {"query": query, "limit": limit}
         if service_desk_id:
@@ -1275,7 +1279,7 @@ class AtlassianClient:
     async def servicedesk_debug_request(self, endpoint: str) -> Dict[str, Any]:
         """Debug Service Management API requests to see actual responses"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/{endpoint}"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/{endpoint}"
 
         try:
             response = await self.make_request("GET", url)
@@ -1297,7 +1301,7 @@ class AtlassianClient:
     async def servicedesk_check_availability(self) -> Dict[str, Any]:
         """Check if Jira Service Management is available and configured"""
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/servicedesk"
 
         try:
             response = await self.make_request("GET", url, params={"limit": 1})
@@ -1465,7 +1469,8 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
 
 # Phase 1: Space Management Tools
 @mcp.tool()
-async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = None, status: str = "current") -> List[Dict[str, Any]]:
+async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = None, 
+                                status: str = "current") -> List[Dict[str, Any]]:
     """List Confluence spaces.
 
     Args:
@@ -1667,7 +1672,8 @@ async def confluence_get_page_version(page_id: str, version_number: int) -> Dict
 
 
 @mcp.tool()
-async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0) -> List[Dict[str, Any]]:
+async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50, 
+                                  start: int = 0) -> List[Dict[str, Any]]:
     """Get service desk requests with pagination support.
 
     Args:
@@ -1689,7 +1695,8 @@ async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def servicedesk_create_request(service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
+async def servicedesk_create_request(service_desk_id: str, request_type_id: str, 
+                                    summary: str, description: str) -> Dict[str, Any]:
     """Create a new service desk request.
 
     Args:
@@ -2045,7 +2052,8 @@ async def servicedesk_get_request_attachments(issue_key: str) -> List[Dict[str, 
 
 @mcp.tool()
 @handle_atlassian_errors
-async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None, 
+                                           limit: int = 10) -> List[Dict[str, Any]]:
     """Search knowledge base articles for relevant information.
 
     Args:
