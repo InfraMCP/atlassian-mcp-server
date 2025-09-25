@@ -51,7 +51,7 @@ class AtlassianConfig(BaseModel):
 
 class AtlassianError(Exception):
     """Structured error for AI agent consumption."""
-    def __init__(self, message: str, error_code: str, context: Dict[str, Any] = None,
+    def __init__(self, message: str, error_code: str, *, context: Dict[str, Any] = None,
                  troubleshooting: List[str] = None, suggested_actions: List[str] = None):
         super().__init__(message)
         self.error_code = error_code
@@ -220,11 +220,13 @@ class AtlassianClient:
                 await asyncio.sleep(0.5)
 
             callback_data = self.server.callback_data
+            if not isinstance(callback_data, dict):
+                raise ValueError("Invalid callback data received")
 
-            if callback_data['error']:
+            if callback_data.get('error'):
                 raise ValueError(f"OAuth error: {callback_data['error']}")
 
-            if callback_data['state'] != state:
+            if callback_data.get('state') != state:
                 raise ValueError("Invalid state parameter")
 
             print("✅ Authorization received, exchanging for tokens...")
@@ -234,7 +236,7 @@ class AtlassianClient:
                 "grant_type": "authorization_code",
                 "client_id": self.config.client_id,
                 "client_secret": self.config.client_secret,
-                "code": callback_data['code'],
+                "code": callback_data.get('code'),
                 "redirect_uri": "http://localhost:8080/callback",
                 "code_verifier": self.code_verifier
             }
