@@ -127,8 +127,8 @@ class AtlassianClient:
         self.code_verifier = None  # For PKCE OAuth flow
 
         # API base URLs to reduce line lengths
-        self.confluence_base = "{self.confluence_base}"
-        self.jira_base = "{self.jira_base}"
+        self.confluence_base = "https://api.atlassian.com/ex/confluence"
+        self.jira_base = "https://api.atlassian.com/ex/jira"
 
     def generate_pkce(self):
         """Generate PKCE codes"""
