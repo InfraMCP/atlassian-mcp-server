@@ -1,4 +1,10 @@
-"""Atlassian MCP Server with seamless OAuth 2.0 flow for Jira and Confluence."""
+"""
+Atlassian MCP Server with seamless OAuth 2.0 flow for Jira and Confluence.
+
+This server provides comprehensive integration with Atlassian Cloud services,
+enabling AI assistants to interact with Jira issues, Confluence pages, and
+perform various administrative tasks through secure OAuth 2.0 authentication.
+"""
 
 import asyncio
 import base64
@@ -17,6 +23,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
 
+import httpx
+from mcp.server.fastmcp import FastMCP
+from pydantic import BaseModel
+
 # Configure logging to both stderr and file
 log_file = Path.home() / ".atlassian-mcp-debug.log"
 logging.basicConfig(
@@ -28,10 +38,6 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-
-import httpx
-from mcp.server.fastmcp import FastMCP
-from pydantic import BaseModel
 
 
 class AtlassianConfig(BaseModel):
@@ -119,7 +125,9 @@ class AtlassianClient:
 
     def generate_pkce(self):
         """Generate PKCE codes"""
-        code_verifier = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip('=')
+        code_verifier = base64.urlsafe_b64encode(
+            secrets.token_bytes(32)
+        ).decode('utf-8').rstrip('=')
         code_challenge = base64.urlsafe_b64encode(
             hashlib.sha256(code_verifier.encode('utf-8')).digest()
         ).decode('utf-8').rstrip('=')
@@ -150,7 +158,7 @@ class AtlassianClient:
 
         try:
             # Generate PKCE
-            code_verifier, code_challenge = self.generate_pkce()
+            _, code_challenge = self.generate_pkce()
             state = secrets.token_urlsafe(32)
 
             # Minimal required scopes for MCP functionality
@@ -161,9 +169,9 @@ class AtlassianClient:
                 "write:jira-work",                   # Create/update issues
 
                 # Confluence - Enhanced scopes for full functionality
-                "read:page:confluence",              # Read pages (replaces read:confluence-content.all)
-                "read:space:confluence",             # Read space info (replaces read:confluence-space.summary)
-                "write:page:confluence",             # Create/update pages (replaces write:confluence-content)
+                "read:page:confluence",  # Read pages
+                "read:space:confluence",  # Read space info
+                "write:page:confluence",  # Create/update pages
                 "read:comment:confluence",           # Read comments
                 "write:comment:confluence",          # Create comments
                 "read:label:confluence",             # Read labels
@@ -271,7 +279,7 @@ class AtlassianClient:
             self.config.access_token = creds.get("access_token")
             self.config.refresh_token = creds.get("refresh_token")
             return bool(self.config.access_token)
-        except Exception:
+        except (FileNotFoundError, json.JSONDecodeError, KeyError):
             return False
 
     async def refresh_access_token(self) -> bool:
@@ -298,7 +306,7 @@ class AtlassianClient:
             self.config.access_token = tokens["access_token"]
             self.save_credentials()
             return True
-        except Exception:
+        except (httpx.HTTPError, json.JSONDecodeError, KeyError):
             return False
 
     async def get_headers(self) -> Dict[str, str]:
@@ -404,7 +412,7 @@ class AtlassianClient:
                 context={"operation": operation_name, "url": url},
                 troubleshooting=["Check network connection", "Verify request parameters"],
                 suggested_actions=["Retry the operation", "Check logs for details"]
-            )
+            ) from e
 
     async def get_cloud_id(self, required_scopes: Optional[List[str]] = None) -> str:
         """Get the cloud ID for the configured site, optionally filtering by required scopes"""
