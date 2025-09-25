@@ -617,53 +617,44 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json()
 
+    async def _get_space_id(self, cloud_id: str, space_key: str) -> str:
+        """Helper method to get space ID from space key."""
+        space_url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces"
+        space_response = await self.make_request("GET", space_url, params={"keys": space_key})
+        spaces = space_response.json().get("results", [])
+        if not spaces:
+            raise ValueError(f"Space '{space_key}' not found")
+        return spaces[0]["id"]
+
+    async def _build_page_data(self, space_id: str, title: str, content: str, 
+                              parent_id: Optional[str] = None) -> Dict[str, Any]:
+        """Helper method to build page creation data."""
+        data = {
+            "spaceId": space_id,
+            "status": "current",
+            "title": title,
+            "body": {
+                "representation": "storage",
+                "value": content
+            },
+            "subtype": "live"
+        }
+        if parent_id:
+            data["parentId"] = parent_id
+        return data
+
     async def confluence_create_page(
         self, space_key: str, title: str, content: str, parent_id: Optional[str] = None
     ) -> Dict[str, Any]:
         """Create a new Confluence page"""
         try:
-            # Use same cloud ID approach as working read operations
             cloud_id = await self.get_cloud_id()
-
-            # Debug: Check accessible resources and scopes
-            resources_url = "https://api.atlassian.com/oauth/token/accessible-resources"
-            resources_response = await self.make_request("GET", resources_url)
-            resources_data = resources_response.json()
-
-            # Debug info for cloud ID selection
-            cloud_id_debug = {
-                "requested_scopes": ["write:confluence-content"],
-                "available_resources": resources_data,
-                "selected_cloud_id": cloud_id
-            }
-
-            # Get space ID from space key using v2 API
-            space_url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces"
-            space_response = await self.make_request("GET", space_url, params={"keys": space_key})
-            spaces = space_response.json().get("results", [])
-            if not spaces:
-                return {"error": f"Space '{space_key}' not found"}
-            space_id = spaces[0]["id"]
-
+            space_id = await self._get_space_id(cloud_id, space_key)
+            
             url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
+            data = await self._build_page_data(space_id, title, content, parent_id)
 
-            data = {
-                "spaceId": space_id,
-                "status": "current",
-                "title": title,
-                "body": {
-                    "representation": "storage",
-                    "value": content
-                },
-                "subtype": "live"
-            }
-
-            if parent_id:
-                data["parentId"] = parent_id
-
-            # Debug the actual API call
             try:
-                # Check if we have access token before making request
                 await self.get_headers()
                 response = await self.make_request("POST", url, json=data)
                 return response.json()
@@ -671,13 +662,11 @@ class AtlassianClient:
                 return {
                     "error": f"Authentication error: {str(auth_error)}",
                     "debug_info": {
-                        "cloud_id_selection": cloud_id_debug,
                         "api_url": url,
                         "request_data": data,
                         "space_id": space_id,
                         "access_token_present": bool(self.config.access_token),
                         "access_token_length": (len(self.config.access_token)
-                                               if self.config.access_token else 0),
                         "refresh_token_present": bool(self.config.refresh_token),
                         "site_url": self.config.site_url
                     }
@@ -686,32 +675,18 @@ class AtlassianClient:
                 return {
                     "error": f"API call failed: {str(api_error)}",
                     "debug_info": {
-                        "cloud_id_selection": cloud_id_debug,
                         "api_url": url,
                         "request_data": data,
-                        "space_id": space_id,
-                        "headers_used": (
-                            await self.get_headers() if hasattr(self, 'get_headers')
-                            else "Unable to get headers"
-                        )
+                        "space_id": space_id
                     }
                 }
 
         except (httpx.HTTPError, ValueError, KeyError, AttributeError) as e:
-            # Return debug info with the error
             return {
                 "error": str(e),
                 "debug_info": {
                     "site_url": self.config.site_url,
-                    "has_access_token": bool(self.config.access_token),
-                    "cloud_id_selection": (
-                        cloud_id_debug if 'cloud_id_debug' in locals()
-                        else "Failed before cloud ID selection"
-                    ),
-                    "accessible_resources": (resources_data if 'resources_data' in locals()
-                                            else "Failed to retrieve"),
-                    "cloud_id": (cloud_id if 'cloud_id' in locals() 
-                                else "Failed to retrieve")
+                    "has_access_token": bool(self.config.access_token)
                 }
             }
 
