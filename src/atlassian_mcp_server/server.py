@@ -358,7 +358,7 @@ class AtlassianClient:
 
             # Try to refresh token if unauthorized
             if response.status_code == 401 and self.config.refresh_token:
-                logger.debug("make_request: Token expired, refreshing for operation: %s", operation_name)
+                logger.debug("make_request: Token expired, refreshing [%s]", operation_name)
                 if await self.refresh_access_token():
                     headers = await self.get_headers()
                     kwargs['headers'].update(headers)
@@ -370,7 +370,8 @@ class AtlassianClient:
                     "Authentication required - access token expired or invalid",
                     "AUTH_REQUIRED",
                     context={"operation": operation_name, "url": url},
-                    troubleshooting=["Access token may have expired", "OAuth scopes may be insufficient"],
+                    troubleshooting=["Access token may have expired", 
+                                    "OAuth scopes may be insufficient"],
                     suggested_actions=["authenticate_atlassian()"]
                 )
 
