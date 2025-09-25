@@ -125,7 +125,7 @@ class AtlassianClient:
         self.server = None
         self.server_thread = None
         self.code_verifier = None  # For PKCE OAuth flow
-        
+
         # API base URLs to reduce line lengths
         self.confluence_base = "{self.confluence_base}"
         self.jira_base = "{self.jira_base}"
@@ -370,7 +370,7 @@ class AtlassianClient:
                     "Authentication required - access token expired or invalid",
                     "AUTH_REQUIRED",
                     context={"operation": operation_name, "url": url},
-                    troubleshooting=["Access token may have expired", 
+                    troubleshooting=["Access token may have expired",
                                     "OAuth scopes may be insufficient"],
                     suggested_actions=["authenticate_atlassian()"]
                 )
@@ -387,7 +387,9 @@ class AtlassianClient:
                             "Missing OAuth scopes for Service Management",
                             "Insufficient permissions for Service Management"
                         ],
-                        suggested_actions=["authenticate_atlassian()", "servicedesk_check_availability()"]
+                        suggested_actions=[
+                            "authenticate_atlassian()", "servicedesk_check_availability()"
+                        ]
                     )
                 raise AtlassianError(
                     "Service desk endpoint not found",
@@ -420,7 +422,9 @@ class AtlassianClient:
                     context={"operation": operation_name, "url": url,
                             "status_code": response.status_code},
                     troubleshooting=[f"Server returned {response.status_code} error"],
-                    suggested_actions=["Check request parameters", "Verify permissions"]
+                    suggested_actions=[
+                        "Check request parameters", "Verify permissions"
+                    ]
                 )
 
             logger.debug("make_request: Success %s [operation=%s]", response.status_code, operation_name)
@@ -706,7 +710,8 @@ class AtlassianClient:
                     ),
                     "accessible_resources": (resources_data if 'resources_data' in locals()
                                             else "Failed to retrieve"),
-                    "cloud_id": cloud_id if 'cloud_id' in locals() else "Failed to retrieve"
+                    "cloud_id": (cloud_id if 'cloud_id' in locals() 
+                                else "Failed to retrieve")
                 }
             }
 
@@ -1470,7 +1475,7 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
 
 # Phase 1: Space Management Tools
 @mcp.tool()
-async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = None, 
+async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = None,
                                 status: str = "current") -> List[Dict[str, Any]]:
     """List Confluence spaces.
 
@@ -1673,7 +1678,7 @@ async def confluence_get_page_version(page_id: str, version_number: int) -> Dict
 
 
 @mcp.tool()
-async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50, 
+async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50,
                                   start: int = 0) -> List[Dict[str, Any]]:
     """Get service desk requests with pagination support.
 
@@ -1696,7 +1701,7 @@ async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def servicedesk_create_request(service_desk_id: str, request_type_id: str, 
+async def servicedesk_create_request(service_desk_id: str, request_type_id: str,
                                     summary: str, description: str) -> Dict[str, Any]:
     """Create a new service desk request.
 
@@ -2053,7 +2058,7 @@ async def servicedesk_get_request_attachments(issue_key: str) -> List[Dict[str, 
 
 @mcp.tool()
 @handle_atlassian_errors
-async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None, 
+async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None,
                                            limit: int = 10) -> List[Dict[str, Any]]:
     """Search knowledge base articles for relevant information.
 
