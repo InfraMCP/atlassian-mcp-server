@@ -626,7 +626,7 @@ class AtlassianClient:
             raise ValueError(f"Space '{space_key}' not found")
         return spaces[0]["id"]
 
-    async def _build_page_data(self, space_id: str, title: str, content: str, 
+    async def _build_page_data(self, space_id: str, title: str, content: str,
                               parent_id: Optional[str] = None) -> Dict[str, Any]:
         """Helper method to build page creation data."""
         data = {
@@ -650,7 +650,7 @@ class AtlassianClient:
         try:
             cloud_id = await self.get_cloud_id()
             space_id = await self._get_space_id(cloud_id, space_key)
-            
+
             url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
             data = await self._build_page_data(space_id, title, content, parent_id)
 
@@ -667,6 +667,7 @@ class AtlassianClient:
                         "space_id": space_id,
                         "access_token_present": bool(self.config.access_token),
                         "access_token_length": (len(self.config.access_token)
+                                               if self.config.access_token else 0),
                         "refresh_token_present": bool(self.config.refresh_token),
                         "site_url": self.config.site_url
                     }
