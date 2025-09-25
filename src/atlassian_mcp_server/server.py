@@ -679,7 +679,10 @@ class AtlassianClient:
                         "api_url": url,
                         "request_data": data,
                         "space_id": space_id,
-                        "headers_used": await self.get_headers() if hasattr(self, 'get_headers') else "Unable to get headers"
+                        "headers_used": (
+                            await self.get_headers() if hasattr(self, 'get_headers')
+                            else "Unable to get headers"
+                        )
                     }
                 }
 
@@ -690,7 +693,10 @@ class AtlassianClient:
                 "debug_info": {
                     "site_url": self.config.site_url,
                     "has_access_token": bool(self.config.access_token),
-                    "cloud_id_selection": cloud_id_debug if 'cloud_id_debug' in locals() else "Failed before cloud ID selection",
+                    "cloud_id_selection": (
+                        cloud_id_debug if 'cloud_id_debug' in locals()
+                        else "Failed before cloud ID selection"
+                    ),
                     "accessible_resources": resources_data if 'resources_data' in locals() else "Failed to retrieve",
                     "cloud_id": cloud_id if 'cloud_id' in locals() else "Failed to retrieve"
                 }
