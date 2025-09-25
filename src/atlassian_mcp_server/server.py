@@ -113,7 +113,6 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
         """Suppress HTTP server log messages."""
-        pass
 
 
 class AtlassianClient:
@@ -224,7 +223,8 @@ class AtlassianClient:
                 raise ValueError("Invalid callback data received")
 
             if callback_data.get('error'):
-                raise ValueError(f"OAuth error: {callback_data['error']}")
+                error_msg = callback_data.get('error', 'Unknown error')
+                raise ValueError(f"OAuth error: {error_msg}")
 
             if callback_data.get('state') != state:
                 raise ValueError("Invalid state parameter")
@@ -478,7 +478,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json()
 
-    async def jira_create_issue(self, project_key: str, summary: str, description: str, issue_type: str = "Task") -> Dict[str, Any]:
+    async def jira_create_issue(
+        self, project_key: str, summary: str, description: str, issue_type: str = "Task"
+    ) -> Dict[str, Any]:
         """Create a new Jira issue"""
         cloud_id = await self.get_cloud_id()
 
@@ -529,7 +531,9 @@ class AtlassianClient:
         response = await self.make_request("POST", url, json=data)
         return response.json()
 
-    async def jira_update_issue(self, issue_key: str, summary: Optional[str] = None, description: Optional[str] = None) -> Dict[str, Any]:
+    async def jira_update_issue(
+        self, issue_key: str, summary: Optional[str] = None, description: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Update a Jira issue"""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/issue/{issue_key}"
@@ -603,7 +607,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json()
 
-    async def confluence_create_page(self, space_key: str, title: str, content: str, parent_id: Optional[str] = None) -> Dict[str, Any]:
+    async def confluence_create_page(
+        self, space_key: str, title: str, content: str, parent_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Create a new Confluence page"""
         try:
             # Use same cloud ID approach as working read operations
@@ -753,7 +759,9 @@ class AtlassianClient:
         return response.json().get("results", [])
 
     # Phase 2: Enhanced Search & Discovery
-    async def confluence_search_content(self, query: str, limit: int = 25, space_id: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def confluence_search_content(
+        self, query: str, limit: int = 25, space_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Advanced search across Confluence content."""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/pages"
@@ -791,7 +799,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-    async def confluence_add_comment(self, page_id: str, comment: str, parent_comment_id: Optional[str] = None) -> Dict[str, Any]:
+    async def confluence_add_comment(
+        self, page_id: str, comment: str, parent_comment_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Add a comment to a page."""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/footer-comments"
@@ -950,7 +960,9 @@ class AtlassianClient:
         return response.json()
 
     # Phase 2: Critical Missing Tools - Request Type Discovery
-    async def servicedesk_list_request_types(self, service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+    async def servicedesk_list_request_types(
+        self, service_desk_id: Optional[str] = None, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """List available request types for creating service desk requests.
 
         Essential for AI agents to discover request types before creating requests.
@@ -1043,7 +1055,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json().get("values", [])
 
-    async def servicedesk_transition_request(self, issue_key: str, transition_id: str, comment: Optional[str] = None) -> Dict[str, Any]:
+    async def servicedesk_transition_request(
+        self, issue_key: str, transition_id: str, comment: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Transition a service desk request to a new status.
 
         Args:
@@ -1107,7 +1121,11 @@ class AtlassianClient:
 
         response = await self.make_request(
             "POST", url, json=data,
-            operation_context={"name": "servicedesk_create_request", "service_desk_id": service_desk_id, "request_type_id": request_type_id}
+            operation_context={
+                "name": "servicedesk_create_request",
+                "service_desk_id": service_desk_id,
+                "request_type_id": request_type_id
+            }
         )
         return response.json()
 
@@ -1221,7 +1239,9 @@ class AtlassianClient:
         return response.json().get("values", [])
 
     # Phase 3: Advanced Features - Knowledge Base Integration
-    async def servicedesk_search_knowledge_base(self, query: str, service_desk_id: Optional[str] = None, limit: int = 10) -> List[Dict[str, Any]]:
+    async def servicedesk_search_knowledge_base(
+        self, query: str, service_desk_id: Optional[str] = None, limit: int = 10
+    ) -> List[Dict[str, Any]]:
         """Search knowledge base articles."""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/knowledgebase/article"
