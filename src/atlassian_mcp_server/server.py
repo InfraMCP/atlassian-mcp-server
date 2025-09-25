@@ -111,7 +111,8 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def log_message(self, format, *args):
+    def log_message(self, fmt, *args):
+        """Suppress HTTP server log messages."""
         pass
 
 
@@ -340,7 +341,7 @@ class AtlassianClient:
         operation_context = kwargs.pop('operation_context', {})
         operation_name = operation_context.get('name', 'unknown')
 
-        logger.debug(f"make_request: {method} {url} - Operation: {operation_name}")
+        logger.debug("make_request: %s %s - Operation: %s", method, url, operation_name)
 
         try:
             headers = await self.get_headers()
@@ -350,7 +351,7 @@ class AtlassianClient:
 
             # Try to refresh token if unauthorized
             if response.status_code == 401 and self.config.refresh_token:
-                logger.debug(f"make_request: Token expired, refreshing for operation: {operation_name}")
+                logger.debug("make_request: Token expired, refreshing for operation: %s", operation_name)
                 if await self.refresh_access_token():
                     headers = await self.get_headers()
                     kwargs['headers'].update(headers)
@@ -380,14 +381,13 @@ class AtlassianClient:
                         ],
                         suggested_actions=["authenticate_atlassian()", "servicedesk_check_availability()"]
                     )
-                else:
-                    raise AtlassianError(
-                        "Service desk endpoint not found",
-                        "SERVICEDESK_ENDPOINT_NOT_FOUND",
-                        context={"operation": operation_name, "url": url},
-                        troubleshooting=["Missing OAuth scopes for Service Management"],
-                        suggested_actions=["authenticate_atlassian()"]
-                    )
+                raise AtlassianError(
+                    "Service desk endpoint not found",
+                    "SERVICEDESK_ENDPOINT_NOT_FOUND",
+                    context={"operation": operation_name, "url": url},
+                    troubleshooting=["Missing OAuth scopes for Service Management"],
+                    suggested_actions=["authenticate_atlassian()"]
+                )
 
             if response.status_code == 403 and '/servicedeskapi/' in url:
                 raise AtlassianError(
@@ -403,7 +403,8 @@ class AtlassianClient:
 
             # Generic HTTP errors
             if not response.is_success:
-                logger.error(f"make_request: HTTP {response.status_code} - {response.text} [operation={operation_name}]")
+                logger.error("make_request: HTTP %s - %s [operation=%s]", 
+                           response.status_code, response.text, operation_name)
                 raise AtlassianError(
                     f"HTTP {response.status_code}: {response.text}",
                     f"HTTP_{response.status_code}",
@@ -412,14 +413,14 @@ class AtlassianClient:
                     suggested_actions=["Check request parameters", "Verify permissions"]
                 )
 
-            logger.debug(f"make_request: Success {response.status_code} [operation={operation_name}]")
+            logger.debug("make_request: Success %s [operation=%s]", response.status_code, operation_name)
             return response
 
         except AtlassianError:
             # Re-raise structured errors as-is
             raise
         except Exception as e:
-            logger.error(f"make_request: Unexpected error - {e} [operation={operation_name}]")
+            logger.error("make_request: Unexpected error - %s [operation=%s]", e, operation_name)
             raise AtlassianError(
                 f"Unexpected error: {e}",
                 "UNEXPECTED_ERROR",
@@ -548,7 +549,7 @@ class AtlassianClient:
             }
 
         data = {"fields": fields}
-        response = await self.make_request("PUT", url, json=data)
+        await self.make_request("PUT", url, json=data)
         return {"success": True, "issue_key": issue_key}
 
     async def jira_add_comment(self, issue_key: str, comment: str) -> Dict[str, Any]:
@@ -658,7 +659,7 @@ class AtlassianClient:
                         "site_url": self.config.site_url
                     }
                 }
-            except Exception as api_error:
+            except (httpx.HTTPError, ValueError, KeyError) as api_error:
                 return {
                     "error": f"API call failed: {str(api_error)}",
                     "debug_info": {
@@ -670,7 +671,7 @@ class AtlassianClient:
                     }
                 }
 
-        except Exception as e:
+        except (httpx.HTTPError, ValueError, KeyError, AttributeError) as e:
             # Return debug info with the error
             return {
                 "error": str(e),
