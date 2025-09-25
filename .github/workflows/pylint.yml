@@ -38,7 +38,8 @@ jobs:
         python -m pip install --upgrade pip
         pip install pylint
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        if [ -f requirements-pinned.txt ]; then pip install -r requirements-pinned.txt; fi
+        # Install the package itself for pylint analysis
+        pip install -e .
     
     - name: Run Pylint with exit-zero for detailed output
       run: |
