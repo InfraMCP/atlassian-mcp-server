@@ -184,7 +184,7 @@ class AtlassianClient:
                 # Service Management - Classic scopes (not granular)
                 "read:servicedesk-request",          # Read service desk requests
                 "write:servicedesk-request",         # Create/update service desk requests
-                "manage:servicedesk-customer",       # Manage service desk customers and participants
+                "manage:servicedesk-customer",  # Manage service desk customers and participants
 
                 # Core
                 "read:me",                           # User profile
@@ -1298,7 +1298,8 @@ class AtlassianClient:
                 "service_desk_count": len(service_desks),
                 "service_desks": service_desks,
                 "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured.",
-                "note": "If other servicedesk_ tools fail with 404 errors, you may need to re-authenticate with: authenticate_atlassian()"
+                "note": ("If other servicedesk_ tools fail with 404 errors, you may need to "
+                         "re-authenticate with: authenticate_atlassian()")
             }
         except (httpx.HTTPError, ValueError, KeyError) as e:
             return {
