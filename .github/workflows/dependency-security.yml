@@ -10,6 +10,10 @@ on:
     - cron: '0 9 * * 1'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   dependency-check:
     runs-on: ubuntu-latest
@@ -34,7 +38,7 @@ jobs:
     
     - name: Run safety check
       run: |
-        safety check --json --output safety-report.json || true
+        safety check --json > safety-report.json || true
         
     - name: Run pip-audit
       run: |
@@ -53,6 +57,8 @@ jobs:
     - name: Comment on PR with security findings
       if: github.event_name == 'pull_request'
       uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.ACTIONS_TOKEN }}
       with:
         script: |
           const fs = require('fs');
