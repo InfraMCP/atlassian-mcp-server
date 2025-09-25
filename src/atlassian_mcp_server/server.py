@@ -124,6 +124,7 @@ class AtlassianClient:
         self.credentials_file = Path.home() / ".atlassian_mcp_credentials.json"
         self.server = None
         self.server_thread = None
+        self.code_verifier = None  # For PKCE OAuth flow
 
     def generate_pkce(self):
         """Generate PKCE codes"""
@@ -400,7 +401,8 @@ class AtlassianClient:
                         "User may lack Service Management permissions",
                         "OAuth scopes may be insufficient"
                     ],
-                    suggested_actions=["authenticate_atlassian()", "Contact Atlassian administrator"]
+                    suggested_actions=["authenticate_atlassian()", 
+                                      "Contact Atlassian administrator"]
                 )
 
             # Generic HTTP errors
@@ -410,7 +412,8 @@ class AtlassianClient:
                 raise AtlassianError(
                     f"HTTP {response.status_code}: {response.text}",
                     f"HTTP_{response.status_code}",
-                    context={"operation": operation_name, "url": url, "status_code": response.status_code},
+                    context={"operation": operation_name, "url": url, 
+                            "status_code": response.status_code},
                     troubleshooting=[f"Server returned {response.status_code} error"],
                     suggested_actions=["Check request parameters", "Verify permissions"]
                 )
@@ -418,9 +421,6 @@ class AtlassianClient:
             logger.debug("make_request: Success %s [operation=%s]", response.status_code, operation_name)
             return response
 
-        except AtlassianError:
-            # Re-raise structured errors as-is
-            raise
         except (httpx.HTTPError, ValueError, KeyError, OSError) as e:
             logger.error("make_request: Unexpected error - %s [operation=%s]", e, operation_name)
             raise AtlassianError(
@@ -2053,9 +2053,7 @@ async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optiona
 
 
 async def initialize_client():
-    """Initialize the Atlassian client."""
-    global atlassian_client
-
+    """Initialize and return the Atlassian client."""
     site_url = os.getenv("ATLASSIAN_SITE_URL")
     client_id = os.getenv("ATLASSIAN_CLIENT_ID")
     client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
@@ -2069,7 +2067,7 @@ async def initialize_client():
         client_secret=client_secret
     )
 
-    atlassian_client = AtlassianClient(config)
+    return AtlassianClient(config)
 
     # Try to load existing credentials
     if atlassian_client.load_credentials():
@@ -2086,9 +2084,10 @@ async def initialize_client():
 
 def main():
     """Main entry point."""
+    global atlassian_client
     try:
         # Initialize client
-        asyncio.run(initialize_client())
+        atlassian_client = asyncio.run(initialize_client())
 
         # Run MCP server
         mcp.run()
