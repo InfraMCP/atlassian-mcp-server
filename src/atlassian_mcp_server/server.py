@@ -161,6 +161,8 @@ class AtlassianClient:
         try:
             # Generate PKCE
             code_verifier, code_challenge = self.generate_pkce()
+            # Store code_verifier for token exchange
+            self.code_verifier = code_verifier
             state = secrets.token_urlsafe(32)
 
             # Minimal required scopes for MCP functionality
@@ -232,7 +234,8 @@ class AtlassianClient:
                 "client_id": self.config.client_id,
                 "client_secret": self.config.client_secret,
                 "code": callback_data['code'],
-                "redirect_uri": "http://localhost:8080/callback"
+                "redirect_uri": "http://localhost:8080/callback",
+                "code_verifier": self.code_verifier
             }
 
             response = await self.client.post(
@@ -251,11 +254,18 @@ class AtlassianClient:
             self.config.refresh_token = tokens.get("refresh_token")
             self.save_credentials()
 
+            # Clean up code_verifier for security
+            if hasattr(self, 'code_verifier'):
+                delattr(self, 'code_verifier')
+
             print("✅ OAuth flow completed successfully!")
             return tokens
 
         finally:
             self.stop_callback_server()
+            # Clean up code_verifier in case of errors
+            if hasattr(self, 'code_verifier'):
+                delattr(self, 'code_verifier')
 
     def save_credentials(self):
         """Save credentials to file"""
