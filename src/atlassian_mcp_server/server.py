@@ -405,7 +405,7 @@ class AtlassianClient:
 
             # Generic HTTP errors
             if not response.is_success:
-                logger.error("make_request: HTTP %s - %s [operation=%s]", 
+                logger.error("make_request: HTTP %s - %s [operation=%s]",
                            response.status_code, response.text, operation_name)
                 raise AtlassianError(
                     f"HTTP {response.status_code}: {response.text}",
@@ -421,7 +421,7 @@ class AtlassianClient:
         except AtlassianError:
             # Re-raise structured errors as-is
             raise
-        except Exception as e:
+        except (httpx.HTTPError, ValueError, KeyError, OSError) as e:
             logger.error("make_request: Unexpected error - %s [operation=%s]", e, operation_name)
             raise AtlassianError(
                 f"Unexpected error: {e}",
@@ -461,7 +461,11 @@ class AtlassianClient:
         """Search Jira issues using JQL"""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/api/3/search"
-        data = {"jql": jql, "maxResults": max_results, "fields": ["summary", "status", "assignee", "priority", "issuetype", "description"]}
+        data = {
+            "jql": jql,
+            "maxResults": max_results,
+            "fields": ["summary", "status", "assignee", "priority", "issuetype", "description"]
+        }
 
         response = await self.make_request("POST", url, json=data)
         return response.json().get("issues", [])
@@ -644,7 +648,7 @@ class AtlassianClient:
             # Debug the actual API call
             try:
                 # Check if we have access token before making request
-                headers_debug = await self.get_headers()
+                await self.get_headers()
                 response = await self.make_request("POST", url, json=data)
                 return response.json()
             except ValueError as auth_error:
@@ -661,7 +665,7 @@ class AtlassianClient:
                         "site_url": self.config.site_url
                     }
                 }
-            except (httpx.HTTPError, ValueError, KeyError) as api_error:
+            except (httpx.HTTPError, KeyError) as api_error:
                 return {
                     "error": f"API call failed: {str(api_error)}",
                     "debug_info": {
@@ -709,7 +713,9 @@ class AtlassianClient:
         return response.json()
 
     # Phase 1: Space Management
-    async def confluence_list_spaces(self, limit: int = 25, space_type: Optional[str] = None, status: str = "current") -> List[Dict[str, Any]]:
+    async def confluence_list_spaces(
+        self, limit: int = 25, space_type: Optional[str] = None, status: str = "current"
+    ) -> List[Dict[str, Any]]:
         """List Confluence spaces with filtering options."""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/confluence/{cloud_id}/wiki/api/v2/spaces"
@@ -913,7 +919,7 @@ class AtlassianClient:
             - "Access denied": User may lack Service Management permissions
             - "Endpoint not found": Missing OAuth scopes - re-authenticate
         """
-        logger.debug(f"servicedesk_list_service_desks: Fetching service desks (limit={limit})")
+        logger.debug("servicedesk_list_service_desks: Fetching service desks (limit=%s)", limit)
 
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk"
@@ -925,7 +931,7 @@ class AtlassianClient:
         )
 
         results = response.json().get("values", [])
-        logger.debug(f"servicedesk_list_service_desks: Found {len(results)} service desks")
+        logger.debug("servicedesk_list_service_desks: Found %s service desks", len(results))
         return results
 
     async def servicedesk_get_service_desk(self, service_desk_id: str) -> Dict[str, Any]:
@@ -979,7 +985,8 @@ class AtlassianClient:
             Request type object with detailed information
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype/{request_type_id}"
+        url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/"
+               f"servicedesk/{service_desk_id}/requesttype/{request_type_id}")
 
         response = await self.make_request("GET", url)
         return response.json()
@@ -997,7 +1004,8 @@ class AtlassianClient:
             List of field objects with fieldId, name, required, and other metadata
         """
         cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype/{request_type_id}/field"
+        url = (f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/"
+               f"servicedesk/{service_desk_id}/requesttype/{request_type_id}/field")
 
         response = await self.make_request("GET", url)
         return response.json().get("requestTypeFields", [])
@@ -1056,7 +1064,9 @@ class AtlassianClient:
         response = await self.make_request("POST", url, json=data)
         return response.json()
 
-    async def servicedesk_get_requests(self, service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0) -> List[Dict[str, Any]]:
+    async def servicedesk_get_requests(
+        self, service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0
+    ) -> List[Dict[str, Any]]:
         """Get service desk requests with enhanced pagination."""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
@@ -1079,7 +1089,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json()
 
-    async def servicedesk_create_request(self, service_desk_id: str, request_type_id: str, summary: str, description: str) -> Dict[str, Any]:
+    async def servicedesk_create_request(
+        self, service_desk_id: str, request_type_id: str, summary: str, description: str
+    ) -> Dict[str, Any]:
         """Create a new service desk request"""
         cloud_id = await self.get_cloud_id()
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request"
@@ -1167,9 +1179,9 @@ class AtlassianClient:
         url = f"https://api.atlassian.com/ex/jira/{cloud_id}/rest/servicedeskapi/request/{issue_key}/notification"
 
         if subscribe:
-            response = await self.make_request("PUT", url)
+            await self.make_request("PUT", url)
         else:
-            response = await self.make_request("DELETE", url)
+            await self.make_request("DELETE", url)
 
         return {"success": True, "subscribed": subscribe}
 
@@ -1238,7 +1250,7 @@ class AtlassianClient:
                 "response_text": response.text[:500],  # First 500 chars
                 "headers": dict(response.headers)
             }
-        except Exception as e:
+        except (httpx.HTTPError, ValueError, KeyError) as e:
             return {
                 "success": False,
                 "error": str(e),
@@ -1262,7 +1274,7 @@ class AtlassianClient:
                 "message": f"Jira Service Management is available with {len(service_desks)} service desk(s) configured.",
                 "note": "If other servicedesk_ tools fail with 404 errors, you may need to re-authenticate with: authenticate_atlassian()"
             }
-        except Exception as e:
+        except (httpx.HTTPError, ValueError, KeyError) as e:
             return {
                 "available": False,
                 "service_desk_count": 0,
@@ -1270,8 +1282,6 @@ class AtlassianClient:
                 "message": f"Jira Service Management not available: {str(e)}"
             }
 
-
-import functools
 
 def handle_atlassian_errors(func):
     """Decorator to convert AtlassianError to ValueError for MCP compatibility."""
@@ -1286,7 +1296,7 @@ def handle_atlassian_errors(func):
                 error_msg += f" Troubleshooting: {'; '.join(e.troubleshooting)}"
             if e.suggested_actions:
                 error_msg += f" Suggested actions: {'; '.join(e.suggested_actions)}"
-            raise ValueError(error_msg)
+            raise ValueError(error_msg) from e
     return wrapper
 
 
@@ -1306,7 +1316,7 @@ async def authenticate_atlassian() -> str:
     try:
         await atlassian_client.seamless_oauth_flow()
         return "✅ Authentication successful! You can now use Atlassian tools."
-    except Exception as e:
+    except (ValueError, httpx.HTTPError, OSError) as e:
         return f"❌ Authentication failed: {str(e)}"
 
 
@@ -2038,7 +2048,7 @@ async def initialize_client():
             # Test credentials
             await atlassian_client.get_headers()
             print("✅ Credentials are valid")
-        except Exception:
+        except (ValueError, httpx.HTTPError):
             print("⚠️ Stored credentials are invalid. Use authenticate_atlassian tool to re-authenticate.")
     else:
         print("🔐 No existing credentials found. Use authenticate_atlassian tool to authenticate.")
@@ -2052,7 +2062,8 @@ def main():
 
         # Run MCP server
         mcp.run()
-    except Exception as e:
+        return 0
+    except (ValueError, RuntimeError, OSError) as e:
         print(f"❌ Error starting server: {e}")
         return 1
 
