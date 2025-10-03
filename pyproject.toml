@@ -44,10 +44,10 @@ security = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/rorymcmahon/atlassian-mcp-server"
-Repository = "https://github.com/rorymcmahon/atlassian-mcp-server"
-Issues = "https://github.com/rorymcmahon/atlassian-mcp-server/issues"
-Documentation = "https://github.com/rorymcmahon/atlassian-mcp-server#readme"
+Homepage = "https://github.com/InfraMCP/atlassian-mcp-server"
+Repository = "https://github.com/InfraMCP/atlassian-mcp-server"
+Issues = "https://github.com/InfraMCP/atlassian-mcp-server/issues"
+Documentation = "https://github.com/InfraMCP/atlassian-mcp-server#readme"
 
 [project.scripts]
 atlassian-mcp-server = "atlassian_mcp_server:main"
