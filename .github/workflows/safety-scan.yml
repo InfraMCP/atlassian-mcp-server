@@ -1,4 +1,6 @@
 name: Safety Security Scan
+permissions:
+  contents: read
 
 on:
   push:
