@@ -3,6 +3,7 @@ permissions:
   contents: read
   security-events: write
   actions: read
+  pull-requests: write
 
 on:
   push:
