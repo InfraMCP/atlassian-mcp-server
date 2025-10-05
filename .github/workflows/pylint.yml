@@ -17,6 +17,8 @@ on:
 permissions:
   contents: read
   pull-requests: write
+  security-events: write
+  actions: read
 
 jobs:
   pylint:
