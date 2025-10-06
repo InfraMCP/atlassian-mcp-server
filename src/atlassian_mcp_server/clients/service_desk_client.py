@@ -375,8 +375,11 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         self, workspace_id: str, object_type_id: str, attributes: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Create a new object in Assets workspace."""
-        cloud_id = await self.get_cloud_id()
-        url = f"https://api.atlassian.com/jsm/assets/workspace/{cloud_id}/v1/object/create"
+        # Use dedicated Assets REST API with workspace_id (not cloud_id)
+        url = (
+            f"https://api.atlassian.com/jsm/assets/workspace/"
+            f"{workspace_id}/v1/object/create"
+        )
         
         data = {
             "objectTypeId": object_type_id,
