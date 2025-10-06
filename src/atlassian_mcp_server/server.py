@@ -52,7 +52,7 @@ class AtlassianConfig(BaseModel):
 class AtlassianError(Exception):
     """Structured error for AI agent consumption."""
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         message: str,
         error_code: str,
@@ -123,7 +123,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
         """Suppress HTTP server log messages."""
 
 
-class AtlassianClient:
+class AtlassianClient:  # pylint: disable=too-many-instance-attributes,too-many-public-methods
     """HTTP client for Atlassian Cloud APIs with seamless OAuth 2.0 flow."""
 
     def __init__(self, config: AtlassianConfig):
