@@ -1,6 +1,5 @@
 """
 Atlassian MCP Server with seamless OAuth 2.0 flow for Jira and Confluence.
-# pylint: disable=too-many-lines
 
 This server provides comprehensive integration with Atlassian Cloud services,
 enabling AI assistants to interact with Jira issues, Confluence pages, and
@@ -23,6 +22,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
+
+# pylint: disable=too-many-lines
 
 import httpx
 from mcp.server.fastmcp import FastMCP
