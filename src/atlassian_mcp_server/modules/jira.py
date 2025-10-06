@@ -26,7 +26,7 @@ class JiraModule(BaseModule):
     def register_tools(self, server: Server) -> None:
         """Register Jira tools."""
 
-        @server.call_tool()
+        @server.tool()
         async def jira_search(jql: str, max_results: int = 50) -> List[Dict[str, Any]]:
             """Search Jira issues using JQL (Jira Query Language).
 
@@ -41,7 +41,7 @@ class JiraModule(BaseModule):
                 )
             return await self.client.jira_search(jql, max_results)
 
-        @server.call_tool()
+        @server.tool()
         async def jira_get_issue(issue_key: str) -> Dict[str, Any]:
             """Get detailed information about a specific Jira issue."""
             if not self.client or not self.client.config.access_token:
@@ -50,7 +50,7 @@ class JiraModule(BaseModule):
                 )
             return await self.client.jira_get_issue(issue_key)
 
-        @server.call_tool()
+        @server.tool()
         async def jira_create_issue(
             project_key: str, summary: str, description: str, issue_type: str = "Task"
         ) -> Dict[str, Any]:
@@ -70,7 +70,7 @@ class JiraModule(BaseModule):
                 project_key, summary, description, issue_type
             )
 
-        @server.call_tool()
+        @server.tool()
         async def jira_update_issue(
             issue_key: str,
             summary: Optional[str] = None,
@@ -83,7 +83,7 @@ class JiraModule(BaseModule):
                 )
             return await self.client.jira_update_issue(issue_key, summary, description)
 
-        @server.call_tool()
+        @server.tool()
         async def jira_add_comment(issue_key: str, comment: str) -> Dict[str, Any]:
             """Add a comment to a Jira issue."""
             if not self.client or not self.client.config.access_token:

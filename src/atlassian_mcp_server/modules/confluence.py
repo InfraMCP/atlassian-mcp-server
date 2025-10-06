@@ -34,7 +34,7 @@ class ConfluenceModule(BaseModule):
     def register_tools(self, server: Server) -> None:
         """Register Confluence tools."""
 
-        @server.call_tool()
+        @server.tool()
         async def confluence_search(
             query: str, limit: int = 10
         ) -> List[Dict[str, Any]]:
@@ -50,7 +50,7 @@ class ConfluenceModule(BaseModule):
                 )
             return await self.client.confluence_search(query, limit)
 
-        @server.call_tool()
+        @server.tool()
         async def confluence_get_page(page_id: str) -> Dict[str, Any]:
             """Get detailed content of a specific Confluence page."""
             if not self.client or not self.client.config.access_token:
@@ -59,7 +59,7 @@ class ConfluenceModule(BaseModule):
                 )
             return await self.client.confluence_get_page(page_id)
 
-        @server.call_tool()
+        @server.tool()
         async def confluence_create_page(
             space_key: str, title: str, content: str, parent_id: Optional[str] = None
         ) -> Dict[str, Any]:
@@ -79,7 +79,7 @@ class ConfluenceModule(BaseModule):
                 space_key, title, content, parent_id
             )
 
-        @server.call_tool()
+        @server.tool()
         async def confluence_update_page(
             page_id: str, title: str, content: str, version: int
         ) -> Dict[str, Any]:
@@ -99,7 +99,7 @@ class ConfluenceModule(BaseModule):
                 page_id, title, content, version
             )
 
-        @server.call_tool()
+        @server.tool()
         async def confluence_list_spaces(
             limit: int = 25, space_type: Optional[str] = None, status: str = "current"
         ) -> List[Dict[str, Any]]:
