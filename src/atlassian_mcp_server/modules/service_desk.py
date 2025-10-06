@@ -122,7 +122,7 @@ class ServiceDeskModule(BaseModule):
             """List available Service Desk resources."""
             return [
                 types.Resource(
-                    uri="service-desk://assets/workspaces",
+                    uri="service-desk://assets/workspaces",  # type: ignore
                     name="Assets Workspaces",
                     description="List of Assets workspaces in Jira Service Management",
                     mimeType="application/json",

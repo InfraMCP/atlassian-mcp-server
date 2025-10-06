@@ -273,7 +273,7 @@ class ConfluenceClient(BaseAtlassianClient):
 
         params = {"limit": limit}
         if prefix:
-            params["prefix"] = prefix
+            params["prefix"] = prefix  # type: ignore
 
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])

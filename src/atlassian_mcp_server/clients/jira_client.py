@@ -108,7 +108,7 @@ class JiraClient(BaseAtlassianClient):
         if summary:
             fields["summary"] = summary
         if description:
-            fields["description"] = {
+            fields["description"] = {  # type: ignore
                 "type": "doc",
                 "version": 1,
                 "content": [

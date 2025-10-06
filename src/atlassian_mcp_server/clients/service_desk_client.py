@@ -122,7 +122,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
 
         data = {"id": transition_id}
         if comment:
-            data["additionalComment"] = {"body": comment}
+            data["additionalComment"] = {"body": comment}  # type: ignore
 
         response = await self.make_request("POST", url, json=data)
         return response.json()
@@ -136,7 +136,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
 
         params = {"limit": limit, "start": start}
         if service_desk_id:
-            params["serviceDeskId"] = service_desk_id
+            params["serviceDeskId"] = service_desk_id  # type: ignore
 
         response = await self.make_request("GET", url, params=params)
         return response.json().get("values", [])
