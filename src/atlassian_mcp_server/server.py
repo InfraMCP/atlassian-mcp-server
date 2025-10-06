@@ -80,7 +80,7 @@ class AtlassianError(Exception):
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
     """Handle OAuth callback automatically."""
 
-    def do_GET(self):
+    def do_GET(self):  # pylint: disable=invalid-name
         """Handle GET requests for OAuth callback."""
         if self.path.startswith("/callback"):
             parsed = urlparse(self.path)
@@ -1255,7 +1255,10 @@ class AtlassianClient:
             decision: 'approve' or 'decline'
         """
         cloud_id = await self.get_cloud_id()
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/approval/{approval_id}"
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/"
+            f"{issue_key}/approval/{approval_id}"
+        )
 
         data = {"decision": decision}
         response = await self.make_request("POST", url, json=data)
@@ -1922,7 +1925,8 @@ async def servicedesk_add_participants(
 ) -> Dict[str, Any]:
     """Add participants to a service desk request.
 
-    🚨 CRITICAL: DO NOT call this tool without explicit user confirmation first!
+    🚨 CRITICAL: DO NOT call this tool without explicit user confirmation 
+    first!
 
     REQUIRED WORKFLOW:
     1. ALWAYS ask user: "Adding participants will subscribe them to notifications for ticket {issue_key}.
@@ -1971,7 +1975,8 @@ async def servicedesk_debug_request(endpoint: str) -> Dict[str, Any]:
 
 @mcp.tool()
 async def servicedesk_check_availability() -> Dict[str, Any]:
-    """Check if Jira Service Management is available and configured on this Atlassian instance.
+    """Check if Jira Service Management is available and configured on this 
+    Atlassian instance.
 
     Use this tool first to verify Service Management is set up before using other servicedesk_ tools.
     """
@@ -2146,7 +2151,9 @@ async def servicedesk_get_request_transitions(issue_key: str) -> List[Dict[str, 
 
 @mcp.tool()
 async def servicedesk_transition_request(
-    issue_key: str, transition_id: str, comment: Optional[str] = None
+    issue_key: str, 
+    transition_id: str, 
+    comment: Optional[str] = None
 ) -> Dict[str, Any]:
     """Transition a service desk request to a new status.
 
