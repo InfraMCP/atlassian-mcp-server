@@ -117,7 +117,7 @@ class ConfluenceClient(BaseAtlassianClient):
         self, page_id: str, title: str, content: str, version: int
     ) -> Dict[str, Any]:
         """Update an existing Confluence page"""
-        cloud_id = await self.get_cloud_id(required_scopes=["write:page:confluence"])
+        cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}"
 
         data = {
