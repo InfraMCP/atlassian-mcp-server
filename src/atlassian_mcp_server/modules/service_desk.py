@@ -139,6 +139,15 @@ class ServiceDeskModule(BaseModule):
                 )
             return await self.client.assets_create_object(workspace_id, object_type_id, attributes)
 
+        @server.tool()
+        async def assets_get_object_types(workspace_id: str) -> List[Dict[str, Any]]:
+            """Get object types from an Assets workspace to discover schema."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.assets_get_object_types(workspace_id)
+
     def register_resources(self, server: Server) -> None:
         """Register Service Desk resources."""
         # Resources will be added here if needed in the future

@@ -388,3 +388,12 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
 
         response = await self.make_request("POST", url, json=data)
         return response.json()
+    async def assets_get_object_types(
+        self, workspace_id: str
+    ) -> List[Dict[str, Any]]:
+        """Get object types and their attributes from an Assets workspace."""
+        cloud_id = await self.get_cloud_id()
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace/{workspace_id}/v1/objecttype/list"
+
+        response = await self.make_request("GET", url)
+        return response.json().get("values", [])
