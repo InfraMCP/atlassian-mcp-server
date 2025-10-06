@@ -10,9 +10,9 @@ from .modules.base import BaseModule
 class ModuleManager:
     """Manages which modules are enabled and registers their tools/resources."""
 
-    def __init__(self, client):
+    def __init__(self, config):
         """Initialize the module manager."""
-        self.client = client
+        self.config = config
         self.available_modules = {
             "jira": JiraModule,
             "confluence": ConfluenceModule,
@@ -48,7 +48,7 @@ class ModuleManager:
         # Initialize enabled modules
         for name in enabled_names:
             module_class = self.available_modules[name]
-            self.enabled_modules[name] = module_class(self.client)
+            self.enabled_modules[name] = module_class(self.config)
 
     def get_enabled_modules(self) -> Dict[str, BaseModule]:
         """Get all enabled modules."""
@@ -87,6 +87,6 @@ class ModuleManager:
             status[name] = {
                 "enabled": is_enabled,
                 "available": is_available,
-                "required_scopes": module_class(None).required_scopes
+                "required_scopes": module_class(self.config).required_scopes
             }
         return status

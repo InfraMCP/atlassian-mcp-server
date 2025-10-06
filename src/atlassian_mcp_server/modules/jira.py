@@ -3,10 +3,15 @@
 from typing import List, Dict, Any, Optional
 from mcp.server import Server
 from .base import BaseModule
+from ..clients import JiraClient
 
 
 class JiraModule(BaseModule):
     """Module for core Jira functionality."""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.client = JiraClient(config)
 
     @property
     def name(self) -> str:

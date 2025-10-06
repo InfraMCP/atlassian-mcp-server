@@ -4,14 +4,16 @@ from typing import Dict, Any, List, Optional
 from mcp.server import Server
 from mcp import types
 from .base import BaseModule
+from ..clients import ServiceDeskClient
 
 
 class ServiceDeskModule(BaseModule):
     """Module for Jira Service Management functionality including Assets."""
 
-    def __init__(self, client):
+    def __init__(self, config):
         """Initialize the Service Desk module."""
-        super().__init__(client)
+        super().__init__(config)
+        self.client = ServiceDeskClient(config)
         self._assets_list_workspaces = None
 
     @property

@@ -3,10 +3,15 @@
 from typing import List, Dict, Any, Optional
 from mcp.server import Server
 from .base import BaseModule
+from ..clients import ConfluenceClient
 
 
 class ConfluenceModule(BaseModule):
     """Module for Confluence functionality."""
+
+    def __init__(self, config):
+        super().__init__(config)
+        self.client = ConfluenceClient(config)
 
     @property
     def name(self) -> str:

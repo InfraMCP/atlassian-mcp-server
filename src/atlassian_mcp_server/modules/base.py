@@ -8,9 +8,10 @@ from mcp.server import Server
 class BaseModule(ABC):
     """Base class for all Atlassian MCP modules."""
 
-    def __init__(self, client):
-        """Initialize the module with an Atlassian client."""
-        self.client = client
+    def __init__(self, config):
+        """Initialize the module with Atlassian config."""
+        self.config = config
+        self.client = None  # Will be set by subclasses
 
     @property
     @abstractmethod
