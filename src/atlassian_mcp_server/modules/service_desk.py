@@ -42,7 +42,9 @@ class ServiceDeskModule(BaseModule):
             return await self.client.servicedesk_check_availability()
 
         @server.tool()
-        async def servicedesk_list_service_desks(limit: int = 50) -> List[Dict[str, Any]]:
+        async def servicedesk_list_service_desks(
+            limit: int = 50,
+        ) -> List[Dict[str, Any]]:
             """List available service desks for creating requests."""
             if not self.client or not self.client.config.access_token:
                 raise ValueError(
@@ -59,7 +61,9 @@ class ServiceDeskModule(BaseModule):
                 raise ValueError(
                     "Not authenticated. Use authenticate_atlassian tool first."
                 )
-            return await self.client.servicedesk_list_request_types(service_desk_id, limit)
+            return await self.client.servicedesk_list_request_types(
+                service_desk_id, limit
+            )
 
         @server.tool()
         async def servicedesk_get_requests(
@@ -101,7 +105,7 @@ class ServiceDeskModule(BaseModule):
             start: int = 0, limit: int = 50
         ) -> List[Dict[str, Any]]:
             """List Assets workspaces available in Jira Service Management.
-            
+
             Assets (formerly Insight) provides IT asset management capabilities
             within Jira Service Management.
             """
@@ -120,14 +124,16 @@ class ServiceDeskModule(BaseModule):
                 raise ValueError(
                     "Not authenticated. Use authenticate_atlassian tool first."
                 )
-            return await self.client.assets_get_objects(workspace_id, object_type_id, start, limit)
+            return await self.client.assets_get_objects(
+                workspace_id, object_type_id, start, limit
+            )
 
         @server.tool()
         async def assets_create_object(
             workspace_id: str, object_type_id: str, attributes: Dict[str, Any]
         ) -> Dict[str, Any]:
             """Create a new object in Assets workspace.
-            
+
             Args:
                 workspace_id: Assets workspace ID
                 object_type_id: Object type ID to create
@@ -137,7 +143,9 @@ class ServiceDeskModule(BaseModule):
                 raise ValueError(
                     "Not authenticated. Use authenticate_atlassian tool first."
                 )
-            return await self.client.assets_create_object(workspace_id, object_type_id, attributes)
+            return await self.client.assets_create_object(
+                workspace_id, object_type_id, attributes
+            )
 
         @server.tool()
         async def assets_get_object_types(workspace_id: str) -> List[Dict[str, Any]]:

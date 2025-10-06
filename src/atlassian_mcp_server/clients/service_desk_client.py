@@ -371,7 +371,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         data = {
             "qlQuery": f"objectType = {object_type_id}",
             "page": start // limit + 1,
-            "resultsPerPage": limit
+            "resultsPerPage": limit,
         }
 
         response = await self.make_request("POST", url, json=data)
@@ -391,9 +391,12 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         data = {
             "objectTypeId": object_type_id,
             "attributes": [
-                {"objectTypeAttributeId": attr_id, "objectAttributeValues": [{"value": value}]}
+                {
+                    "objectTypeAttributeId": attr_id,
+                    "objectAttributeValues": [{"value": value}],
+                }
                 for attr_id, value in attributes.items()
-            ]
+            ],
         }
 
         try:
@@ -406,12 +409,11 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
                     "url": url,
                     "data": data,
                     "workspace_id": workspace_id,
-                    "approach": "service_desk_api"
-                }
+                    "approach": "service_desk_api",
+                },
             }
-    async def assets_get_object_types(
-        self, workspace_id: str
-    ) -> List[Dict[str, Any]]:
+
+    async def assets_get_object_types(self, workspace_id: str) -> List[Dict[str, Any]]:
         """Get object types and their attributes from an Assets workspace."""
         cloud_id = await self.get_cloud_id()
         url = (
