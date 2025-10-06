@@ -1,6 +1,6 @@
 """Atlassian MCP Server - OAuth-enabled MCP server for Confluence and Jira."""
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 from .server import main
 
