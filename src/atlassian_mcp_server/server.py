@@ -2174,7 +2174,9 @@ async def servicedesk_transition_request(
         # First get available transitions
         transitions = await servicedesk_get_request_transitions("HELP-123")
         # Then transition to new status
-        result = await servicedesk_transition_request("HELP-123", transitions[0]["id"], "Moving to in progress")
+        result = await servicedesk_transition_request(
+            "HELP-123", transitions[0]["id"], "Moving to in progress"
+        )
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
