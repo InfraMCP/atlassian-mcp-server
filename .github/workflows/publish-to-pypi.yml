@@ -1,6 +1,4 @@
 name: Publish to PyPI
-permissions:
-  contents: read
 
 on:
   release:
