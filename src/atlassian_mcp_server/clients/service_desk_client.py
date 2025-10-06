@@ -344,7 +344,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         self, start: int = 0, limit: int = 50
     ) -> List[Dict[str, Any]]:
         """List Assets workspaces available in Jira Service Management.
-        
+
         Assets (formerly Insight) is part of Jira Service Management and provides
         IT asset management capabilities.
         """
@@ -360,8 +360,11 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
     ) -> List[Dict[str, Any]]:
         """Get objects from an Assets workspace by object type."""
         cloud_id = await self.get_cloud_id()
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace/{workspace_id}/v1/object/navlist/aql"
-        
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
+            f"assets/workspace/{workspace_id}/v1/object/navlist/aql"
+        )
+
         data = {
             "qlQuery": f"objectType = {object_type_id}",
             "page": start // limit + 1,
@@ -377,8 +380,11 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         """Create a new object in Assets workspace."""
         cloud_id = await self.get_cloud_id()
         # Try Service Desk API approach instead of dedicated Assets API
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/insight/workspace/{workspace_id}/v1/object/create"
-        
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
+            f"insight/workspace/{workspace_id}/v1/object/create"
+        )
+
         data = {
             "objectTypeId": object_type_id,
             "attributes": [
@@ -390,7 +396,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         try:
             response = await self.make_request("POST", url, json=data)
             return response.json()
-        except Exception as e:
+        except (httpx.HTTPError, ValueError, KeyError) as e:
             return {
                 "error": str(e),
                 "debug_info": {
@@ -405,7 +411,10 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
     ) -> List[Dict[str, Any]]:
         """Get object types and their attributes from an Assets workspace."""
         cloud_id = await self.get_cloud_id()
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace/{workspace_id}/v1/objecttype/list"
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
+            f"assets/workspace/{workspace_id}/v1/objecttype/list"
+        )
 
         response = await self.make_request("GET", url)
         return response.json().get("values", [])

@@ -151,4 +151,3 @@ class ServiceDeskModule(BaseModule):
     def register_resources(self, server: Server) -> None:
         """Register Service Desk resources."""
         # Resources will be added here if needed in the future
-        pass
