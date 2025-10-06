@@ -3,7 +3,7 @@
 import os
 from typing import Dict, List, Set
 from mcp.server import Server
-from .modules import JiraModule, ConfluenceModule, ServiceDeskModule, AssetsModule
+from .modules import JiraModule, ConfluenceModule, ServiceDeskModule
 from .modules.base import BaseModule
 
 
@@ -16,8 +16,7 @@ class ModuleManager:
         self.available_modules = {
             "jira": JiraModule,
             "confluence": ConfluenceModule, 
-            "service_desk": ServiceDeskModule,
-            "assets": AssetsModule
+            "service_desk": ServiceDeskModule
         }
         self.enabled_modules: Dict[str, BaseModule] = {}
         self._load_enabled_modules()
