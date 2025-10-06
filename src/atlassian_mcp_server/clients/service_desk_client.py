@@ -375,11 +375,9 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         self, workspace_id: str, object_type_id: str, attributes: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Create a new object in Assets workspace."""
-        # Use dedicated Assets REST API with workspace_id (not cloud_id)
-        url = (
-            f"https://api.atlassian.com/jsm/assets/workspace/"
-            f"{workspace_id}/v1/object/create"
-        )
+        cloud_id = await self.get_cloud_id()
+        # Try Service Desk API approach instead of dedicated Assets API
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/insight/workspace/{workspace_id}/v1/object/create"
         
         data = {
             "objectTypeId": object_type_id,
@@ -393,14 +391,13 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
             response = await self.make_request("POST", url, json=data)
             return response.json()
         except Exception as e:
-            # Return debug info for troubleshooting
             return {
                 "error": str(e),
                 "debug_info": {
                     "url": url,
                     "data": data,
                     "workspace_id": workspace_id,
-                    "has_access_token": bool(self.config.access_token),
+                    "approach": "service_desk_api"
                 }
             }
     async def assets_get_object_types(
