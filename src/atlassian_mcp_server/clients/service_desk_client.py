@@ -354,3 +354,37 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
 
         response = await self.make_request("GET", url, params=params)
         return response.json().get("values", [])
+
+    async def assets_get_objects(
+        self, workspace_id: str, object_type_id: str, start: int = 0, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Get objects from an Assets workspace by object type."""
+        cloud_id = await self.get_cloud_id()
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace/{workspace_id}/v1/object/navlist/aql"
+        
+        data = {
+            "qlQuery": f"objectType = {object_type_id}",
+            "page": start // limit + 1,
+            "resultsPerPage": limit
+        }
+
+        response = await self.make_request("POST", url, json=data)
+        return response.json().get("objectEntries", [])
+
+    async def assets_create_object(
+        self, workspace_id: str, object_type_id: str, attributes: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Create a new object in Assets workspace."""
+        cloud_id = await self.get_cloud_id()
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace/{workspace_id}/v1/object/create"
+        
+        data = {
+            "objectTypeId": object_type_id,
+            "attributes": [
+                {"objectTypeAttributeId": attr_id, "objectAttributeValues": [{"value": value}]}
+                for attr_id, value in attributes.items()
+            ]
+        }
+
+        response = await self.make_request("POST", url, json=data)
+        return response.json()

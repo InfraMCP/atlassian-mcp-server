@@ -111,6 +111,34 @@ class ServiceDeskModule(BaseModule):
                 )
             return await self.client.assets_list_workspaces(start, limit)
 
+        @server.tool()
+        async def assets_get_objects(
+            workspace_id: str, object_type_id: str, start: int = 0, limit: int = 50
+        ) -> List[Dict[str, Any]]:
+            """Get objects from an Assets workspace by object type."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.assets_get_objects(workspace_id, object_type_id, start, limit)
+
+        @server.tool()
+        async def assets_create_object(
+            workspace_id: str, object_type_id: str, attributes: Dict[str, Any]
+        ) -> Dict[str, Any]:
+            """Create a new object in Assets workspace.
+            
+            Args:
+                workspace_id: Assets workspace ID
+                object_type_id: Object type ID to create
+                attributes: Dict mapping attribute IDs to values
+            """
+            if not self.client or not self.client.config.access_token:
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.assets_create_object(workspace_id, object_type_id, attributes)
+
     def register_resources(self, server: Server) -> None:
         """Register Service Desk resources."""
         # Resources will be added here if needed in the future
