@@ -172,6 +172,8 @@ class BaseAtlassianClient:
                 "read:knowledgebase:jira-service-management",
                 "read:cmdb-object:jira",
                 "write:cmdb-object:jira",
+                "read:cmdb-type:jira",
+                "read:cmdb-schema:jira",
                 "read:me",
                 "offline_access",
             ]
