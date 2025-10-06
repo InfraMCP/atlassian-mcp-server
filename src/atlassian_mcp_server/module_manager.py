@@ -61,10 +61,10 @@ class ModuleManager:
     def get_required_scopes(self) -> List[str]:
         """Get all required OAuth scopes for enabled modules."""
         scopes = set()
-        
+
         # Add core scopes that are always required
         scopes.update(["read:me", "offline_access"])
-        
+
         # Add scopes from enabled modules
         for module in self.enabled_modules.values():
             scopes.update(module.required_scopes)

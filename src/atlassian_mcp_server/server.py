@@ -56,7 +56,7 @@ async def authenticate_atlassian() -> str:
     """Start seamless Atlassian OAuth authentication flow."""
     if not ATLASSIAN_CLIENT:
         raise ValueError("Client not initialized")
-    
+
     # Get required scopes from module manager
     scopes = None
     if MODULE_MANAGER:
