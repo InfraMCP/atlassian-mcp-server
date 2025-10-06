@@ -29,6 +29,8 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 from pydantic import BaseModel
 
+from .module_manager import ModuleManager
+
 # Configure logging to both stderr and file
 log_file = Path.home() / ".atlassian-mcp-debug.log"
 logging.basicConfig(
@@ -1496,6 +1498,12 @@ def main():
     try:
         # Initialize client
         atlassian_client = asyncio.run(initialize_client())
+        
+        # Initialize and register modules
+        module_manager = ModuleManager(atlassian_client)
+        module_manager.register_all(mcp)
+        
+        print(f"✅ Initialized with modules: {list(module_manager.get_enabled_modules().keys())}")
 
         # Run MCP server
         mcp.run()
