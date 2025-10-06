@@ -1,6 +1,6 @@
 """Service Desk module for Jira Service Management functionality."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from mcp.server import Server
 from mcp import types
 from .base import BaseModule
