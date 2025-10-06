@@ -146,7 +146,7 @@ class BaseAtlassianClient:
             if self.server_thread:
                 self.server_thread.join(timeout=1)
 
-    async def seamless_oauth_flow(self):
+    async def seamless_oauth_flow(self, scopes: Optional[List[str]] = None):
         """Complete OAuth flow with automatic callback handling"""
         self.start_callback_server()
 
@@ -155,7 +155,7 @@ class BaseAtlassianClient:
             self.code_verifier = code_verifier
             state = secrets.token_urlsafe(32)
 
-            scopes = [  # pylint: disable=duplicate-code
+            scopes = scopes or [  # pylint: disable=duplicate-code
                 "read:jira-work",
                 "read:jira-user",
                 "write:jira-work",

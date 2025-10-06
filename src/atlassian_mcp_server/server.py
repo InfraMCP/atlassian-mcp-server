@@ -30,8 +30,9 @@ logger = logging.getLogger(__name__)
 # Initialize MCP server
 mcp = FastMCP("Atlassian MCP Server")
 
-# Global client instance
+# Global instances
 ATLASSIAN_CLIENT = None
+MODULE_MANAGER = None
 
 
 def handle_atlassian_errors(func):
@@ -55,8 +56,13 @@ async def authenticate_atlassian() -> str:
     """Start seamless Atlassian OAuth authentication flow."""
     if not ATLASSIAN_CLIENT:
         raise ValueError("Client not initialized")
+    
+    # Get required scopes from module manager
+    scopes = None
+    if MODULE_MANAGER:
+        scopes = MODULE_MANAGER.get_required_scopes()
 
-    return await ATLASSIAN_CLIENT.seamless_oauth_flow()
+    return await ATLASSIAN_CLIENT.seamless_oauth_flow(scopes)
 
 
 async def initialize_client():
@@ -84,17 +90,17 @@ async def initialize_client():
 
 def main():
     """Main entry point."""
-    global ATLASSIAN_CLIENT  # pylint: disable=global-statement
+    global ATLASSIAN_CLIENT, MODULE_MANAGER  # pylint: disable=global-statement
     try:
         # Initialize client
         ATLASSIAN_CLIENT = asyncio.run(initialize_client())
 
         # Initialize and register modules with config
-        module_manager = ModuleManager(ATLASSIAN_CLIENT.config)
-        module_manager.register_all(mcp)
+        MODULE_MANAGER = ModuleManager(ATLASSIAN_CLIENT.config)
+        MODULE_MANAGER.register_all(mcp)
 
         print(
-            f"✅ Initialized with modules: {list(module_manager.get_enabled_modules().keys())}"
+            f"✅ Initialized with modules: {list(MODULE_MANAGER.get_enabled_modules().keys())}"
         )
 
         # Run MCP server
