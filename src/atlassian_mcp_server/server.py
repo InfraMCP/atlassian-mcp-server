@@ -15,7 +15,7 @@ from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
 
-from .clients import BaseAtlassianClient, AtlassianConfig, AtlassianError
+from .clients import AtlassianConfig, AtlassianError, BaseAtlassianClient
 from .module_manager import ModuleManager
 
 # Configure logging to both stderr and file
@@ -93,7 +93,9 @@ def main():
         module_manager = ModuleManager(ATLASSIAN_CLIENT.config)
         module_manager.register_all(mcp)
 
-        print(f"✅ Initialized with modules: {list(module_manager.get_enabled_modules().keys())}")
+        print(
+            f"✅ Initialized with modules: {list(module_manager.get_enabled_modules().keys())}"
+        )
 
         # Run MCP server
         mcp.run()

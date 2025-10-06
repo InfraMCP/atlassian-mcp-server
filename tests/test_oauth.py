@@ -54,7 +54,9 @@ async def test_oauth_flow():
     client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
 
     if not all([site_url, client_id, client_secret]):
-        pytest.skip("Missing environment variables: ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET")
+        pytest.skip(
+            "Missing environment variables: ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET"
+        )
 
     # Start callback server
     server = HTTPServer(("localhost", 8080), OAuthCallbackHandler)

@@ -1,10 +1,12 @@
 """Service Desk module for Jira Service Management functionality."""
 
-from typing import Dict, Any, List, Optional
-from mcp.server import Server
+from typing import Any, Dict, List, Optional
+
 from mcp import types
-from .base import BaseModule
+from mcp.server import Server
+
 from ..clients import ServiceDeskClient
+from .base import BaseModule
 
 
 class ServiceDeskModule(BaseModule):
@@ -26,7 +28,7 @@ class ServiceDeskModule(BaseModule):
             "read:servicedesk-request",
             "write:servicedesk-request",
             "manage:servicedesk-customer",
-            "read:knowledgebase:jira-service-management"
+            "read:knowledgebase:jira-service-management",
         ]
 
     def register_tools(self, server: Server) -> None:
@@ -35,8 +37,7 @@ class ServiceDeskModule(BaseModule):
         # Assets functionality (part of Jira Service Management)
         @server.call_tool()
         async def assets_list_workspaces(
-            start: int = 0,
-            limit: int = 50
+            start: int = 0, limit: int = 50
         ) -> List[Dict[str, Any]]:
             """List Assets workspaces available in Jira Service Management.
 
@@ -56,10 +57,7 @@ class ServiceDeskModule(BaseModule):
             cloud_id = await self.client.get_cloud_id()
             url = f"{self.client.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace"
 
-            params = {
-                "start": start,
-                "limit": min(limit, 50)  # API max is 50
-            }
+            params = {"start": start, "limit": min(limit, 50)}  # API max is 50
 
             response = await self.client.make_request("GET", url, params=params)
             return response.get("values", [])
@@ -70,26 +68,31 @@ class ServiceDeskModule(BaseModule):
         ) -> List[Dict[str, Any]]:
             """Get service desk requests with pagination support."""
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-            return await self.client.servicedesk_get_requests(service_desk_id, limit, start)
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.servicedesk_get_requests(
+                service_desk_id, limit, start
+            )
 
         @server.call_tool()
         async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
             """Get detailed information about a specific service desk request."""
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
             return await self.client.servicedesk_get_request(issue_key)
 
         @server.call_tool()
         async def servicedesk_create_request(
-            service_desk_id: str,
-            request_type_id: str,
-            summary: str,
-            description: str
+            service_desk_id: str, request_type_id: str, summary: str, description: str
         ) -> Dict[str, Any]:
             """Create a new service desk request."""
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
             return await self.client.servicedesk_create_request(
                 service_desk_id, request_type_id, summary, description
             )
@@ -103,7 +106,9 @@ class ServiceDeskModule(BaseModule):
             other servicedesk_ tools.
             """
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
             return await self.client.servicedesk_check_availability()
 
         # Store reference for use in resources
@@ -120,7 +125,7 @@ class ServiceDeskModule(BaseModule):
                     uri="service-desk://assets/workspaces",
                     name="Assets Workspaces",
                     description="List of Assets workspaces in Jira Service Management",
-                    mimeType="application/json"
+                    mimeType="application/json",
                 )
             ]
 
@@ -133,9 +138,15 @@ class ServiceDeskModule(BaseModule):
 
                 try:
                     workspaces = await self._assets_list_workspaces()
-                    return f"Assets Workspaces ({len(workspaces)} found):\n" + \
-                           "\n".join([f"- {ws.get('workspaceId', 'Unknown ID')}"
-                                    for ws in workspaces])
+                    return (
+                        f"Assets Workspaces ({len(workspaces)} found):\n"
+                        + "\n".join(
+                            [
+                                f"- {ws.get('workspaceId', 'Unknown ID')}"
+                                for ws in workspaces
+                            ]
+                        )
+                    )
                 except (ValueError, KeyError, AttributeError) as e:
                     return f"Error fetching Assets workspaces: {str(e)}"
 

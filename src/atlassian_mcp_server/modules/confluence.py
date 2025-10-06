@@ -1,9 +1,11 @@
 """Confluence module for Confluence functionality."""
 
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from mcp.server import Server
-from .base import BaseModule
+
 from ..clients import ConfluenceClient
+from .base import BaseModule
 
 
 class ConfluenceModule(BaseModule):
@@ -26,14 +28,16 @@ class ConfluenceModule(BaseModule):
             "read:comment:confluence",
             "write:comment:confluence",
             "read:label:confluence",
-            "read:attachment:confluence"
+            "read:attachment:confluence",
         ]
 
     def register_tools(self, server: Server) -> None:
         """Register Confluence tools."""
 
         @server.call_tool()
-        async def confluence_search(query: str, limit: int = 10) -> List[Dict[str, Any]]:
+        async def confluence_search(
+            query: str, limit: int = 10
+        ) -> List[Dict[str, Any]]:
             """Search Confluence pages and content.
 
             Args:
@@ -41,22 +45,23 @@ class ConfluenceModule(BaseModule):
                 limit: Maximum number of results to return
             """
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
             return await self.client.confluence_search(query, limit)
 
         @server.call_tool()
         async def confluence_get_page(page_id: str) -> Dict[str, Any]:
             """Get detailed content of a specific Confluence page."""
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
             return await self.client.confluence_get_page(page_id)
 
         @server.call_tool()
         async def confluence_create_page(
-            space_key: str,
-            title: str,
-            content: str,
-            parent_id: Optional[str] = None
+            space_key: str, title: str, content: str, parent_id: Optional[str] = None
         ) -> Dict[str, Any]:
             """Create a new Confluence page.
 
@@ -67,15 +72,16 @@ class ConfluenceModule(BaseModule):
                 parent_id: Optional parent page ID
             """
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-            return await self.client.confluence_create_page(space_key, title, content, parent_id)
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.confluence_create_page(
+                space_key, title, content, parent_id
+            )
 
         @server.call_tool()
         async def confluence_update_page(
-            page_id: str,
-            title: str,
-            content: str,
-            version: int
+            page_id: str, title: str, content: str, version: int
         ) -> Dict[str, Any]:
             """Update an existing Confluence page.
 
@@ -86,14 +92,16 @@ class ConfluenceModule(BaseModule):
                 version: Current version number of the page
             """
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-            return await self.client.confluence_update_page(page_id, title, content, version)
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.confluence_update_page(
+                page_id, title, content, version
+            )
 
         @server.call_tool()
         async def confluence_list_spaces(
-            limit: int = 25,
-            space_type: Optional[str] = None,
-            status: str = "current"
+            limit: int = 25, space_type: Optional[str] = None, status: str = "current"
         ) -> List[Dict[str, Any]]:
             """List Confluence spaces.
 
@@ -103,7 +111,9 @@ class ConfluenceModule(BaseModule):
                 status: Filter by status (current, archived)
             """
             if not self.client or not self.client.config.access_token:
-                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
             return await self.client.confluence_list_spaces(limit, space_type, status)
 
         # Add more Confluence functions as needed...

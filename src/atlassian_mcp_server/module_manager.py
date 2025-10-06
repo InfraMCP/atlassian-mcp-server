@@ -1,9 +1,11 @@
 """Module manager for handling enabled/disabled modules."""
 
 import os
-from typing import Dict, List
+from typing import Any, Dict, List
+
 from mcp.server import Server
-from .modules import JiraModule, ConfluenceModule, ServiceDeskModule
+
+from .modules import ConfluenceModule, JiraModule, ServiceDeskModule
 from .modules.base import BaseModule
 
 
@@ -16,7 +18,7 @@ class ModuleManager:
         self.available_modules = {
             "jira": JiraModule,
             "confluence": ConfluenceModule,
-            "service_desk": ServiceDeskModule
+            "service_desk": ServiceDeskModule,
         }
         self.enabled_modules: Dict[str, BaseModule] = {}
         self._load_enabled_modules()
@@ -32,9 +34,7 @@ class ModuleManager:
         else:
             # Parse comma-separated list
             enabled_names = {
-                name.strip().lower()
-                for name in modules_env.split(",")
-                if name.strip()
+                name.strip().lower() for name in modules_env.split(",") if name.strip()
             }
 
         # Validate module names
@@ -75,7 +75,7 @@ class ModuleManager:
             else:
                 print(f"Skipping {name} module (not available)")
 
-    def get_status(self) -> Dict[str, Dict[str, any]]:
+    def get_status(self) -> Dict[str, Dict[str, Any]]:
         """Get status of all modules."""
         status = {}
         for name, module_class in self.available_modules.items():
@@ -87,6 +87,6 @@ class ModuleManager:
             status[name] = {
                 "enabled": is_enabled,
                 "available": is_available,
-                "required_scopes": module_class(self.config).required_scopes
+                "required_scopes": module_class(self.config).required_scopes,
             }
         return status

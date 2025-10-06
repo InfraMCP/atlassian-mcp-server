@@ -40,9 +40,9 @@ class AtlassianError(Exception):
         message: str,
         error_code: str,
         *,
-        context: Dict[str, Any] = None,
-        troubleshooting: List[str] = None,
-        suggested_actions: List[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+        troubleshooting: Optional[List[str]] = None,
+        suggested_actions: Optional[List[str]] = None,
     ):
         super().__init__(message)
         self.error_code = error_code
@@ -200,15 +200,13 @@ class BaseAtlassianClient:
 
             if not self.server.callback_data:
                 raise AtlassianError(
-                    "Authentication timeout - no callback received",
-                    "AUTH_TIMEOUT"
+                    "Authentication timeout - no callback received", "AUTH_TIMEOUT"
                 )
 
             callback_data = self.server.callback_data
             if callback_data.get("error"):
                 raise AtlassianError(
-                    f"OAuth error: {callback_data['error']}",
-                    "OAUTH_ERROR"
+                    f"OAuth error: {callback_data['error']}", "OAUTH_ERROR"
                 )
 
             # Exchange code for tokens
@@ -229,8 +227,7 @@ class BaseAtlassianClient:
 
             if response.status_code != 200:
                 raise AtlassianError(
-                    f"Token exchange failed: {response.text}",
-                    "TOKEN_EXCHANGE_FAILED"
+                    f"Token exchange failed: {response.text}", "TOKEN_EXCHANGE_FAILED"
                 )
 
             tokens = response.json()
@@ -301,7 +298,7 @@ class BaseAtlassianClient:
         if not self.config.access_token:
             raise AtlassianError(
                 "No access token available. Please authenticate first.",
-                "NO_ACCESS_TOKEN"
+                "NO_ACCESS_TOKEN",
             )
         return {
             "Authorization": f"Bearer {self.config.access_token}",
@@ -326,17 +323,13 @@ class BaseAtlassianClient:
                     response = await self.client.request(method, url, **kwargs)
                 else:
                     raise AtlassianError(
-                        "Authentication failed. Please re-authenticate.",
-                        "AUTH_FAILED"
+                        "Authentication failed. Please re-authenticate.", "AUTH_FAILED"
                     )
 
             return response
 
         except httpx.RequestError as e:
-            raise AtlassianError(
-                f"Request failed: {str(e)}",
-                "REQUEST_FAILED"
-            ) from e
+            raise AtlassianError(f"Request failed: {str(e)}", "REQUEST_FAILED") from e
 
     async def get_cloud_id(self, required_scopes: Optional[List[str]] = None) -> str:
         """Get the cloud ID for the configured site"""
@@ -347,7 +340,7 @@ class BaseAtlassianClient:
         if response.status_code != 200:
             raise AtlassianError(
                 f"Failed to get accessible resources: {response.text}",
-                "CLOUD_ID_FAILED"
+                "CLOUD_ID_FAILED",
             )
 
         resources = response.json()
@@ -361,11 +354,10 @@ class BaseAtlassianClient:
                     if missing_scopes:
                         raise AtlassianError(
                             f"Missing required scopes: {', '.join(missing_scopes)}",
-                            "INSUFFICIENT_SCOPES"
+                            "INSUFFICIENT_SCOPES",
                         )
                 return resource["id"]
 
         raise AtlassianError(
-            f"Site {site_url} not found in accessible resources",
-            "SITE_NOT_FOUND"
+            f"Site {site_url} not found in accessible resources", "SITE_NOT_FOUND"
         )

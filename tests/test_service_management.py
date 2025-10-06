@@ -3,14 +3,15 @@
 
 import asyncio
 import os
-import pytest
 import sys
 from pathlib import Path
+
+import pytest
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from atlassian_mcp_server.server import AtlassianClient, AtlassianConfig
+from atlassian_mcp_server.clients import AtlassianConfig, ServiceDeskClient
 
 
 async def test_service_management():
@@ -22,16 +23,18 @@ async def test_service_management():
     client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
 
     if not all([site_url, client_id, client_secret]):
-        pytest.skip("Missing required environment variables: ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET")
+        pytest.skip(
+            "Missing required environment variables: ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET"
+        )
 
     config = AtlassianConfig(
         site_url=site_url, client_id=client_id, client_secret=client_secret
     )
 
-    client = AtlassianClient(config)
+    client = ServiceDeskClient(config)
 
     # Load existing credentials
-    if not await client.load_credentials():
+    if not client.load_credentials():
         pytest.skip("No valid credentials found. Run test_oauth.py first.")
 
     print("🔧 Testing Service Management functionality...")
