@@ -18,7 +18,7 @@ import sys
 import threading
 import time
 import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import parse_qs, urlencode, urlparse
@@ -31,17 +31,15 @@ from pydantic import BaseModel
 log_file = Path.home() / ".atlassian-mcp-debug.log"
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stderr),
-        logging.FileHandler(log_file)
-    ]
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler(sys.stderr), logging.FileHandler(log_file)],
 )
 logger = logging.getLogger(__name__)
 
 
 class AtlassianConfig(BaseModel):
     """Configuration for Atlassian Cloud connection."""
+
     site_url: str
     client_id: str
     client_secret: str
@@ -51,8 +49,16 @@ class AtlassianConfig(BaseModel):
 
 class AtlassianError(Exception):
     """Structured error for AI agent consumption."""
-    def __init__(self, message: str, error_code: str, *, context: Dict[str, Any] = None,
-                 troubleshooting: List[str] = None, suggested_actions: List[str] = None):
+
+    def __init__(
+        self,
+        message: str,
+        error_code: str,
+        *,
+        context: Dict[str, Any] = None,
+        troubleshooting: List[str] = None,
+        suggested_actions: List[str] = None,
+    ):
         super().__init__(message)
         self.error_code = error_code
         self.context = context or {}
@@ -67,7 +73,7 @@ class AtlassianError(Exception):
             "error_code": self.error_code,
             "context": self.context,
             "troubleshooting": self.troubleshooting,
-            "suggested_actions": self.suggested_actions
+            "suggested_actions": self.suggested_actions,
         }
 
 
@@ -76,21 +82,21 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Handle GET requests for OAuth callback."""
-        if self.path.startswith('/callback'):
+        if self.path.startswith("/callback"):
             parsed = urlparse(self.path)
             query_params = parse_qs(parsed.query)
 
             self.server.callback_data = {
-                'code': query_params.get('code', [None])[0],
-                'state': query_params.get('state', [None])[0],
-                'error': query_params.get('error', [None])[0]
+                "code": query_params.get("code", [None])[0],
+                "state": query_params.get("state", [None])[0],
+                "error": query_params.get("error", [None])[0],
             }
 
             self.send_response(200)
-            self.send_header('Content-type', 'text/html; charset=utf-8')
+            self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
 
-            if self.server.callback_data['error']:
+            if self.server.callback_data["error"]:
                 html = f"""<html>
 <head><title>Authorization Failed</title></head>
 <body style="font-family: Arial, sans-serif; text-align: center; margin-top: 50px;">
@@ -106,7 +112,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
     <script>setTimeout(() => window.close(), 3000);</script>
 </body></html>"""
 
-            self.wfile.write(html.encode('utf-8'))
+            self.wfile.write(html.encode("utf-8"))
             self.server.callback_received = True
         else:
             self.send_error(404)
@@ -132,17 +138,23 @@ class AtlassianClient:
 
     def generate_pkce(self):
         """Generate PKCE codes"""
-        code_verifier = base64.urlsafe_b64encode(
-            secrets.token_bytes(32)
-        ).decode('utf-8').rstrip('=')
-        code_challenge = base64.urlsafe_b64encode(
-            hashlib.sha256(code_verifier.encode('utf-8')).digest()
-        ).decode('utf-8').rstrip('=')
+        code_verifier = (
+            base64.urlsafe_b64encode(secrets.token_bytes(32))
+            .decode("utf-8")
+            .rstrip("=")
+        )
+        code_challenge = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(code_verifier.encode("utf-8")).digest()
+            )
+            .decode("utf-8")
+            .rstrip("=")
+        )
         return code_verifier, code_challenge
 
     def start_callback_server(self):
         """Start the callback server"""
-        self.server = HTTPServer(('localhost', 8080), OAuthCallbackHandler)
+        self.server = HTTPServer(("localhost", 8080), OAuthCallbackHandler)
         self.server.callback_received = False
         self.server.callback_data = None
 
@@ -173,27 +185,24 @@ class AtlassianClient:
             # Minimal required scopes for MCP functionality
             scopes = [
                 # Jira - Essential for ticket operations
-                "read:jira-work",                    # Read issues, projects
-                "read:jira-user",                    # Read user info
-                "write:jira-work",                   # Create/update issues
-
+                "read:jira-work",  # Read issues, projects
+                "read:jira-user",  # Read user info
+                "write:jira-work",  # Create/update issues
                 # Confluence - Enhanced scopes for full functionality
                 "read:page:confluence",  # Read pages
                 "read:space:confluence",  # Read space info
                 "write:page:confluence",  # Create/update pages
-                "read:comment:confluence",           # Read comments
-                "write:comment:confluence",          # Create comments
-                "read:label:confluence",             # Read labels
-                "read:attachment:confluence",        # Read attachments
-
+                "read:comment:confluence",  # Read comments
+                "write:comment:confluence",  # Create comments
+                "read:label:confluence",  # Read labels
+                "read:attachment:confluence",  # Read attachments
                 # Service Management - Classic scopes (not granular)
-                "read:servicedesk-request",          # Read service desk requests
-                "write:servicedesk-request",         # Create/update service desk requests
+                "read:servicedesk-request",  # Read service desk requests
+                "write:servicedesk-request",  # Create/update service desk requests
                 "manage:servicedesk-customer",  # Manage service desk customers and participants
-
                 # Core
-                "read:me",                           # User profile
-                "offline_access"                     # Token refresh
+                "read:me",  # User profile
+                "offline_access",  # Token refresh
             ]
 
             params = {
@@ -205,7 +214,7 @@ class AtlassianClient:
                 "response_type": "code",
                 "prompt": "consent",
                 "code_challenge": code_challenge,
-                "code_challenge_method": "S256"
+                "code_challenge_method": "S256",
             }
 
             auth_url = f"https://auth.atlassian.com/authorize?{urlencode(params)}"
@@ -227,11 +236,11 @@ class AtlassianClient:
             if not isinstance(callback_data, dict):
                 raise ValueError("Invalid callback data received")
 
-            if callback_data.get('error'):
-                error_msg = callback_data.get('error', 'Unknown error')
+            if callback_data.get("error"):
+                error_msg = callback_data.get("error", "Unknown error")
                 raise ValueError(f"OAuth error: {error_msg}")
 
-            if callback_data.get('state') != state:
+            if callback_data.get("state") != state:
                 raise ValueError("Invalid state parameter")
 
             print("✅ Authorization received, exchanging for tokens...")
@@ -241,15 +250,15 @@ class AtlassianClient:
                 "grant_type": "authorization_code",
                 "client_id": self.config.client_id,
                 "client_secret": self.config.client_secret,
-                "code": callback_data.get('code'),
+                "code": callback_data.get("code"),
                 "redirect_uri": "http://localhost:8080/callback",
-                "code_verifier": self.code_verifier
+                "code_verifier": self.code_verifier,
             }
 
             response = await self.client.post(
                 "https://auth.atlassian.com/oauth/token",
                 data=token_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
 
             if response.status_code != 200:
@@ -263,8 +272,8 @@ class AtlassianClient:
             self.save_credentials()
 
             # Clean up code_verifier for security
-            if hasattr(self, 'code_verifier'):
-                delattr(self, 'code_verifier')
+            if hasattr(self, "code_verifier"):
+                delattr(self, "code_verifier")
 
             print("✅ OAuth flow completed successfully!")
             return tokens
@@ -272,8 +281,8 @@ class AtlassianClient:
         finally:
             self.stop_callback_server()
             # Clean up code_verifier in case of errors
-            if hasattr(self, 'code_verifier'):
-                delattr(self, 'code_verifier')
+            if hasattr(self, "code_verifier"):
+                delattr(self, "code_verifier")
 
     def save_credentials(self):
         """Save credentials to file"""
@@ -282,10 +291,10 @@ class AtlassianClient:
             "refresh_token": self.config.refresh_token,
             "site_url": self.config.site_url,
             "client_id": self.config.client_id,
-            "client_secret": self.config.client_secret
+            "client_secret": self.config.client_secret,
         }
 
-        with open(self.credentials_file, 'w', encoding='utf-8') as f:
+        with open(self.credentials_file, "w", encoding="utf-8") as f:
             json.dump(credentials, f, indent=2)
         self.credentials_file.chmod(0o600)
 
@@ -295,7 +304,7 @@ class AtlassianClient:
             return False
 
         try:
-            with open(self.credentials_file, 'r', encoding='utf-8') as f:
+            with open(self.credentials_file, "r", encoding="utf-8") as f:
                 creds = json.load(f)
 
             self.config.access_token = creds.get("access_token")
@@ -313,14 +322,14 @@ class AtlassianClient:
             "grant_type": "refresh_token",
             "client_id": self.config.client_id,
             "client_secret": self.config.client_secret,
-            "refresh_token": self.config.refresh_token
+            "refresh_token": self.config.refresh_token,
         }
 
         try:
             response = await self.client.post(
                 "https://auth.atlassian.com/oauth/token",
                 data=token_data,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
             response.raise_for_status()
 
@@ -339,29 +348,31 @@ class AtlassianClient:
         return {
             "Authorization": f"Bearer {self.config.access_token}",
             "Accept": "application/json",
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
         }
 
     async def make_request(self, method: str, url: str, **kwargs) -> httpx.Response:
         """Make authenticated request with enhanced error handling and debugging."""
         # Extract operation context for debugging
-        operation_context = kwargs.pop('operation_context', {})
-        operation_name = operation_context.get('name', 'unknown')
+        operation_context = kwargs.pop("operation_context", {})
+        operation_name = operation_context.get("name", "unknown")
 
         logger.debug("make_request: %s %s - Operation: %s", method, url, operation_name)
 
         try:
             headers = await self.get_headers()
-            kwargs.setdefault('headers', {}).update(headers)
+            kwargs.setdefault("headers", {}).update(headers)
 
             response = await self.client.request(method, url, **kwargs)
 
             # Try to refresh token if unauthorized
             if response.status_code == 401 and self.config.refresh_token:
-                logger.debug("make_request: Token expired, refreshing [%s]", operation_name)
+                logger.debug(
+                    "make_request: Token expired, refreshing [%s]", operation_name
+                )
                 if await self.refresh_access_token():
                     headers = await self.get_headers()
-                    kwargs['headers'].update(headers)
+                    kwargs["headers"].update(headers)
                     response = await self.client.request(method, url, **kwargs)
 
             # Enhanced error handling with structured responses
@@ -370,14 +381,16 @@ class AtlassianClient:
                     "Authentication required - access token expired or invalid",
                     "AUTH_REQUIRED",
                     context={"operation": operation_name, "url": url},
-                    troubleshooting=["Access token may have expired",
-                                    "OAuth scopes may be insufficient"],
-                    suggested_actions=["authenticate_atlassian()"]
+                    troubleshooting=[
+                        "Access token may have expired",
+                        "OAuth scopes may be insufficient",
+                    ],
+                    suggested_actions=["authenticate_atlassian()"],
                 )
 
             # Service Management specific errors
-            if response.status_code == 404 and '/servicedeskapi/' in url:
-                if '/request/' in url:
+            if response.status_code == 404 and "/servicedeskapi/" in url:
+                if "/request/" in url:
                     raise AtlassianError(
                         "Service desk request not found",
                         "SERVICEDESK_REQUEST_NOT_FOUND",
@@ -385,59 +398,79 @@ class AtlassianClient:
                         troubleshooting=[
                             "Issue may be a regular Jira issue (not service desk request)",
                             "Missing OAuth scopes for Service Management",
-                            "Insufficient permissions for Service Management"
+                            "Insufficient permissions for Service Management",
                         ],
                         suggested_actions=[
-                            "authenticate_atlassian()", "servicedesk_check_availability()"
-                        ]
+                            "authenticate_atlassian()",
+                            "servicedesk_check_availability()",
+                        ],
                     )
                 raise AtlassianError(
                     "Service desk endpoint not found",
                     "SERVICEDESK_ENDPOINT_NOT_FOUND",
                     context={"operation": operation_name, "url": url},
                     troubleshooting=["Missing OAuth scopes for Service Management"],
-                    suggested_actions=["authenticate_atlassian()"]
+                    suggested_actions=["authenticate_atlassian()"],
                 )
 
-            if response.status_code == 403 and '/servicedeskapi/' in url:
+            if response.status_code == 403 and "/servicedeskapi/" in url:
                 raise AtlassianError(
                     "Access denied to Service Management",
                     "SERVICEDESK_ACCESS_DENIED",
                     context={"operation": operation_name, "url": url},
                     troubleshooting=[
                         "User may lack Service Management permissions",
-                        "OAuth scopes may be insufficient"
+                        "OAuth scopes may be insufficient",
                     ],
-                    suggested_actions=["authenticate_atlassian()",
-                                      "Contact Atlassian administrator"]
+                    suggested_actions=[
+                        "authenticate_atlassian()",
+                        "Contact Atlassian administrator",
+                    ],
                 )
 
             # Generic HTTP errors
             if not response.is_success:
-                logger.error("make_request: HTTP %s - %s [operation=%s]",
-                           response.status_code, response.text, operation_name)
+                logger.error(
+                    "make_request: HTTP %s - %s [operation=%s]",
+                    response.status_code,
+                    response.text,
+                    operation_name,
+                )
                 raise AtlassianError(
                     f"HTTP {response.status_code}: {response.text}",
                     f"HTTP_{response.status_code}",
-                    context={"operation": operation_name, "url": url,
-                            "status_code": response.status_code},
+                    context={
+                        "operation": operation_name,
+                        "url": url,
+                        "status_code": response.status_code,
+                    },
                     troubleshooting=[f"Server returned {response.status_code} error"],
                     suggested_actions=[
-                        "Check request parameters", "Verify permissions"
-                    ]
+                        "Check request parameters",
+                        "Verify permissions",
+                    ],
                 )
 
-            logger.debug("make_request: Success %s [operation=%s]", response.status_code, operation_name)
+            logger.debug(
+                "make_request: Success %s [operation=%s]",
+                response.status_code,
+                operation_name,
+            )
             return response
 
         except (httpx.HTTPError, ValueError, KeyError, OSError) as e:
-            logger.error("make_request: Unexpected error - %s [operation=%s]", e, operation_name)
+            logger.error(
+                "make_request: Unexpected error - %s [operation=%s]", e, operation_name
+            )
             raise AtlassianError(
                 f"Unexpected error: {e}",
                 "UNEXPECTED_ERROR",
                 context={"operation": operation_name, "url": url},
-                troubleshooting=["Check network connection", "Verify request parameters"],
-                suggested_actions=["Retry the operation", "Check logs for details"]
+                troubleshooting=[
+                    "Check network connection",
+                    "Verify request parameters",
+                ],
+                suggested_actions=["Retry the operation", "Check logs for details"],
             ) from e
 
     async def get_cloud_id(self, required_scopes: Optional[List[str]] = None) -> str:
@@ -452,7 +485,9 @@ class AtlassianClient:
                 matching_resources.append(resource)
 
         if not matching_resources:
-            raise ValueError(f"Site {self.config.site_url} not found in accessible resources")
+            raise ValueError(
+                f"Site {self.config.site_url} not found in accessible resources"
+            )
 
         # If specific scopes are required, find resource with those scopes
         if required_scopes:
@@ -460,20 +495,31 @@ class AtlassianClient:
                 resource_scopes = resource.get("scopes", [])
                 if all(scope in resource_scopes for scope in required_scopes):
                     return resource["id"]
-            raise ValueError(f"No resource found with required scopes: {required_scopes}")
+            raise ValueError(
+                f"No resource found with required scopes: {required_scopes}"
+            )
 
         # Default: return first matching resource
         return matching_resources[0]["id"]
 
     # Jira Methods
-    async def jira_search(self, jql: str, max_results: int = 50) -> List[Dict[str, Any]]:
+    async def jira_search(
+        self, jql: str, max_results: int = 50
+    ) -> List[Dict[str, Any]]:
         """Search Jira issues using JQL"""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/api/3/search"
         data = {
             "jql": jql,
             "maxResults": max_results,
-            "fields": ["summary", "status", "assignee", "priority", "issuetype", "description"]
+            "fields": [
+                "summary",
+                "status",
+                "assignee",
+                "priority",
+                "issuetype",
+                "description",
+            ],
         }
 
         response = await self.make_request("POST", url, json=data)
@@ -494,22 +540,23 @@ class AtlassianClient:
         cloud_id = await self.get_cloud_id()
 
         # First get valid issue types for the project
-        project_url = (f"{self.jira_base}/{cloud_id}/"
-                       f"rest/api/3/project/{project_key}")
+        project_url = (
+            f"{self.jira_base}/{cloud_id}/" f"rest/api/3/project/{project_key}"
+        )
         project_response = await self.make_request("GET", project_url)
         project_data = project_response.json()
 
         # Find the issue type (use first available if specified type not found)
-        issue_types = project_data.get('issueTypes', [])
+        issue_types = project_data.get("issueTypes", [])
         issue_type_id = None
 
         for it in issue_types:
-            if it['name'].lower() == issue_type.lower():
-                issue_type_id = it['id']
+            if it["name"].lower() == issue_type.lower():
+                issue_type_id = it["id"]
                 break
 
         if not issue_type_id and issue_types:
-            issue_type_id = issue_types[0]['id']  # Use first available
+            issue_type_id = issue_types[0]["id"]  # Use first available
 
         if not issue_type_id:
             raise ValueError(f"No valid issue types found for project {project_key}")
@@ -525,16 +572,11 @@ class AtlassianClient:
                     "content": [
                         {
                             "type": "paragraph",
-                            "content": [
-                                {
-                                    "type": "text",
-                                    "text": description
-                                }
-                            ]
+                            "content": [{"type": "text", "text": description}],
                         }
-                    ]
+                    ],
                 },
-                "issuetype": {"id": issue_type_id}
+                "issuetype": {"id": issue_type_id},
             }
         }
 
@@ -542,7 +584,10 @@ class AtlassianClient:
         return response.json()
 
     async def jira_update_issue(
-        self, issue_key: str, summary: Optional[str] = None, description: Optional[str] = None
+        self,
+        issue_key: str,
+        summary: Optional[str] = None,
+        description: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Update a Jira issue"""
         cloud_id = await self.get_cloud_id()
@@ -558,14 +603,9 @@ class AtlassianClient:
                 "content": [
                     {
                         "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": description
-                            }
-                        ]
+                        "content": [{"type": "text", "text": description}],
                     }
-                ]
+                ],
             }
 
         data = {"fields": fields}
@@ -584,14 +624,9 @@ class AtlassianClient:
                 "content": [
                     {
                         "type": "paragraph",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": comment
-                            }
-                        ]
+                        "content": [{"type": "text", "text": comment}],
                     }
-                ]
+                ],
             }
         }
 
@@ -599,7 +634,9 @@ class AtlassianClient:
         return response.json()
 
     # Confluence Methods
-    async def confluence_search(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    async def confluence_search(
+        self, query: str, limit: int = 10
+    ) -> List[Dict[str, Any]]:
         """Search Confluence content using v2 API"""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
@@ -620,24 +657,24 @@ class AtlassianClient:
     async def _get_space_id(self, cloud_id: str, space_key: str) -> str:
         """Helper method to get space ID from space key."""
         space_url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces"
-        space_response = await self.make_request("GET", space_url, params={"keys": space_key})
+        space_response = await self.make_request(
+            "GET", space_url, params={"keys": space_key}
+        )
         spaces = space_response.json().get("results", [])
         if not spaces:
             raise ValueError(f"Space '{space_key}' not found")
         return spaces[0]["id"]
 
-    async def _build_page_data(self, space_id: str, title: str, content: str,
-                              parent_id: Optional[str] = None) -> Dict[str, Any]:
+    async def _build_page_data(
+        self, space_id: str, title: str, content: str, parent_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """Helper method to build page creation data."""
         data = {
             "spaceId": space_id,
             "status": "current",
             "title": title,
-            "body": {
-                "representation": "storage",
-                "value": content
-            },
-            "subtype": "live"
+            "body": {"representation": "storage", "value": content},
+            "subtype": "live",
         }
         if parent_id:
             data["parentId"] = parent_id
@@ -666,11 +703,14 @@ class AtlassianClient:
                         "request_data": data,
                         "space_id": space_id,
                         "access_token_present": bool(self.config.access_token),
-                        "access_token_length": (len(self.config.access_token)
-                                               if self.config.access_token else 0),
+                        "access_token_length": (
+                            len(self.config.access_token)
+                            if self.config.access_token
+                            else 0
+                        ),
                         "refresh_token_present": bool(self.config.refresh_token),
-                        "site_url": self.config.site_url
-                    }
+                        "site_url": self.config.site_url,
+                    },
                 }
             except (httpx.HTTPError, KeyError) as api_error:
                 return {
@@ -678,8 +718,8 @@ class AtlassianClient:
                     "debug_info": {
                         "api_url": url,
                         "request_data": data,
-                        "space_id": space_id
-                    }
+                        "space_id": space_id,
+                    },
                 }
 
         except (httpx.HTTPError, ValueError, KeyError, AttributeError) as e:
@@ -687,11 +727,13 @@ class AtlassianClient:
                 "error": str(e),
                 "debug_info": {
                     "site_url": self.config.site_url,
-                    "has_access_token": bool(self.config.access_token)
-                }
+                    "has_access_token": bool(self.config.access_token),
+                },
             }
 
-    async def confluence_update_page(self, page_id: str, title: str, content: str, version: int) -> Dict[str, Any]:
+    async def confluence_update_page(
+        self, page_id: str, title: str, content: str, version: int
+    ) -> Dict[str, Any]:
         """Update an existing Confluence page"""
         # Get cloud ID for resource with Confluence write scope
         cloud_id = await self.get_cloud_id(required_scopes=["write:page:confluence"])
@@ -701,13 +743,8 @@ class AtlassianClient:
             "id": page_id,
             "status": "current",
             "title": title,
-            "body": {
-                "representation": "storage",
-                "value": content
-            },
-            "version": {
-                "number": version + 1
-            }
+            "body": {"representation": "storage", "value": content},
+            "version": {"number": version + 1},
         }
 
         response = await self.make_request("PUT", url, json=data)
@@ -728,7 +765,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-    async def confluence_get_space(self, space_id: str, include_icon: bool = False) -> Dict[str, Any]:
+    async def confluence_get_space(
+        self, space_id: str, include_icon: bool = False
+    ) -> Dict[str, Any]:
         """Get detailed information about a specific space."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/spaces/{space_id}"
@@ -738,8 +777,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json()
 
-    async def confluence_get_space_pages(self, space_id: str, limit: int = 25,
-                                        status: str = "current") -> List[Dict[str, Any]]:
+    async def confluence_get_space_pages(
+        self, space_id: str, limit: int = 25, status: str = "current"
+    ) -> List[Dict[str, Any]]:
         """Get pages in a specific space."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages"
@@ -748,7 +788,7 @@ class AtlassianClient:
             "space-id": space_id,
             "limit": limit,
             "status": status,
-            "body-format": "storage"
+            "body-format": "storage",
         }
 
         response = await self.make_request("GET", url, params=params)
@@ -769,7 +809,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-    async def confluence_get_page_children(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    async def confluence_get_page_children(
+        self, page_id: str, limit: int = 25
+    ) -> List[Dict[str, Any]]:
         """Get child pages of a specific page."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/children"
@@ -779,18 +821,15 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-
     # Phase 3: Comments & Collaboration
-    async def confluence_get_page_comments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    async def confluence_get_page_comments(
+        self, page_id: str, limit: int = 25
+    ) -> List[Dict[str, Any]]:
         """Get comments for a specific page."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/footer-comments"
 
-        params = {
-            "page-id": page_id,
-            "limit": limit,
-            "body-format": "storage"
-        }
+        params = {"page-id": page_id, "limit": limit, "body-format": "storage"}
 
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
@@ -804,10 +843,7 @@ class AtlassianClient:
 
         data = {
             "pageId": page_id,
-            "body": {
-                "representation": "storage",
-                "value": comment
-            }
+            "body": {"representation": "storage", "value": comment},
         }
 
         if parent_comment_id:
@@ -827,7 +863,9 @@ class AtlassianClient:
         return response.json()
 
     # Phase 4: Labels & Organization
-    async def confluence_get_page_labels(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    async def confluence_get_page_labels(
+        self, page_id: str, limit: int = 25
+    ) -> List[Dict[str, Any]]:
         """Get labels for a specific page."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/labels"
@@ -837,7 +875,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-    async def confluence_search_by_label(self, label_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    async def confluence_search_by_label(
+        self, label_id: str, limit: int = 25
+    ) -> List[Dict[str, Any]]:
         """Find pages with a specific label."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/labels/{label_id}/pages"
@@ -847,7 +887,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-    async def confluence_list_labels(self, limit: int = 25, prefix: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def confluence_list_labels(
+        self, limit: int = 25, prefix: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """List all labels with optional filtering."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/labels"
@@ -860,10 +902,14 @@ class AtlassianClient:
         return response.json().get("results", [])
 
     # Phase 5: Attachments
-    async def confluence_get_page_attachments(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    async def confluence_get_page_attachments(
+        self, page_id: str, limit: int = 25
+    ) -> List[Dict[str, Any]]:
         """Get attachments for a specific page."""
         cloud_id = await self.get_cloud_id()
-        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/attachments"
+        url = (
+            f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/attachments"
+        )
 
         params = {"limit": limit}
 
@@ -873,13 +919,17 @@ class AtlassianClient:
     async def confluence_get_attachment(self, attachment_id: str) -> Dict[str, Any]:
         """Get details of a specific attachment."""
         cloud_id = await self.get_cloud_id()
-        url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/attachments/{attachment_id}"
+        url = (
+            f"{self.confluence_base}/{cloud_id}/wiki/api/v2/attachments/{attachment_id}"
+        )
 
         response = await self.make_request("GET", url)
         return response.json()
 
     # Phase 6: Version History
-    async def confluence_get_page_versions(self, page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+    async def confluence_get_page_versions(
+        self, page_id: str, limit: int = 25
+    ) -> List[Dict[str, Any]]:
         """Get version history for a page."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.confluence_base}/{cloud_id}/wiki/api/v2/pages/{page_id}/versions"
@@ -889,20 +939,27 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("results", [])
 
-    async def confluence_get_page_version(self, page_id: str, version_number: int) -> Dict[str, Any]:
+    async def confluence_get_page_version(
+        self, page_id: str, version_number: int
+    ) -> Dict[str, Any]:
         """Get a specific version of a page."""
         cloud_id = await self.get_cloud_id()
-        url = (f"{self.confluence_base}/{cloud_id}/"
-               f"wiki/api/v2/pages/{page_id}/versions/{version_number}")
+        url = (
+            f"{self.confluence_base}/{cloud_id}/"
+            f"wiki/api/v2/pages/{page_id}/versions/{version_number}"
+        )
 
         params = {"body-format": "storage"}
 
         response = await self.make_request("GET", url, params=params)
         return response.json()
+
     # Service Management Methods
 
     # Phase 2: Critical Missing Tools - Service Desk Discovery
-    async def servicedesk_list_service_desks(self, limit: int = 50) -> List[Dict[str, Any]]:
+    async def servicedesk_list_service_desks(
+        self, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """List available service desks for creating requests.
 
         Essential for AI agents to discover service desks before creating requests.
@@ -926,22 +983,33 @@ class AtlassianClient:
             - "Access denied": User may lack Service Management permissions
             - "Endpoint not found": Missing OAuth scopes - re-authenticate
         """
-        logger.debug("servicedesk_list_service_desks: Fetching service desks (limit=%s)", limit)
+        logger.debug(
+            "servicedesk_list_service_desks: Fetching service desks (limit=%s)", limit
+        )
 
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/servicedesk"
         params = {"limit": limit}
 
         response = await self.make_request(
-            "GET", url, params=params,
-            operation_context={"name": "servicedesk_list_service_desks", "limit": limit}
+            "GET",
+            url,
+            params=params,
+            operation_context={
+                "name": "servicedesk_list_service_desks",
+                "limit": limit,
+            },
         )
 
         results = response.json().get("values", [])
-        logger.debug("servicedesk_list_service_desks: Found %s service desks", len(results))
+        logger.debug(
+            "servicedesk_list_service_desks: Found %s service desks", len(results)
+        )
         return results
 
-    async def servicedesk_get_service_desk(self, service_desk_id: str) -> Dict[str, Any]:
+    async def servicedesk_get_service_desk(
+        self, service_desk_id: str
+    ) -> Dict[str, Any]:
         """Get detailed information about a specific service desk.
 
         Args:
@@ -975,8 +1043,10 @@ class AtlassianClient:
         cloud_id = await self.get_cloud_id()
 
         if service_desk_id:
-            url = (f"{self.jira_base}/{cloud_id}/"
-                   f"rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype")
+            url = (
+                f"{self.jira_base}/{cloud_id}/"
+                f"rest/servicedeskapi/servicedesk/{service_desk_id}/requesttype"
+            )
         else:
             url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/requesttype"
 
@@ -984,7 +1054,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("values", [])
 
-    async def servicedesk_get_request_type(self, service_desk_id: str, request_type_id: str) -> Dict[str, Any]:
+    async def servicedesk_get_request_type(
+        self, service_desk_id: str, request_type_id: str
+    ) -> Dict[str, Any]:
         """Get detailed information about a specific request type.
 
         Args:
@@ -995,14 +1067,17 @@ class AtlassianClient:
             Request type object with detailed information
         """
         cloud_id = await self.get_cloud_id()
-        url = (f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
-               f"servicedesk/{service_desk_id}/requesttype/{request_type_id}")
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
+            f"servicedesk/{service_desk_id}/requesttype/{request_type_id}"
+        )
 
         response = await self.make_request("GET", url)
         return response.json()
 
-    async def servicedesk_get_request_type_fields(self, service_desk_id: str,
-                                                 request_type_id: str) -> List[Dict[str, Any]]:
+    async def servicedesk_get_request_type_fields(
+        self, service_desk_id: str, request_type_id: str
+    ) -> List[Dict[str, Any]]:
         """Get required and optional fields for a specific request type.
 
         Essential for understanding what fields are needed when creating requests.
@@ -1015,14 +1090,18 @@ class AtlassianClient:
             List of field objects with fieldId, name, required, and other metadata
         """
         cloud_id = await self.get_cloud_id()
-        url = (f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
-               f"servicedesk/{service_desk_id}/requesttype/{request_type_id}/field")
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/"
+            f"servicedesk/{service_desk_id}/requesttype/{request_type_id}/field"
+        )
 
         response = await self.make_request("GET", url)
         return response.json().get("requestTypeFields", [])
 
     # Phase 2: Enhanced Request Management
-    async def servicedesk_get_request_comments(self, issue_key: str, limit: int = 50) -> List[Dict[str, Any]]:
+    async def servicedesk_get_request_comments(
+        self, issue_key: str, limit: int = 50
+    ) -> List[Dict[str, Any]]:
         """Get comments for a service desk request.
 
         Args:
@@ -1039,7 +1118,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url, params=params)
         return response.json().get("values", [])
 
-    async def servicedesk_get_request_transitions(self, issue_key: str) -> List[Dict[str, Any]]:
+    async def servicedesk_get_request_transitions(
+        self, issue_key: str
+    ) -> List[Dict[str, Any]]:
         """Get available transitions for a service desk request.
 
         Args:
@@ -1089,10 +1170,15 @@ class AtlassianClient:
             params["serviceDeskId"] = service_desk_id
 
         response = await self.make_request(
-            "GET", url, params=params,
-            operation_context={"name": "servicedesk_get_requests",
-                              "service_desk_id": service_desk_id,
-                              "limit": limit, "start": start}
+            "GET",
+            url,
+            params=params,
+            operation_context={
+                "name": "servicedesk_get_requests",
+                "service_desk_id": service_desk_id,
+                "limit": limit,
+                "start": start,
+            },
         )
         return response.json().get("values", [])
 
@@ -1114,31 +1200,29 @@ class AtlassianClient:
         data = {
             "serviceDeskId": service_desk_id,
             "requestTypeId": request_type_id,
-            "requestFieldValues": {
-                "summary": summary,
-                "description": description
-            }
+            "requestFieldValues": {"summary": summary, "description": description},
         }
 
         response = await self.make_request(
-            "POST", url, json=data,
+            "POST",
+            url,
+            json=data,
             operation_context={
                 "name": "servicedesk_create_request",
                 "service_desk_id": service_desk_id,
-                "request_type_id": request_type_id
-            }
+                "request_type_id": request_type_id,
+            },
         )
         return response.json()
 
-    async def servicedesk_add_comment(self, issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
+    async def servicedesk_add_comment(
+        self, issue_key: str, comment: str, public: bool = True
+    ) -> Dict[str, Any]:
         """Add comment to service desk request"""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/comment"
 
-        data = {
-            "body": comment,
-            "public": public
-        }
+        data = {"body": comment, "public": public}
 
         response = await self.make_request("POST", url, json=data)
         return response.json()
@@ -1160,7 +1244,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json().get("values", [])
 
-    async def servicedesk_approve_request(self, issue_key: str, approval_id: str, decision: str) -> Dict[str, Any]:
+    async def servicedesk_approve_request(
+        self, issue_key: str, approval_id: str, decision: str
+    ) -> Dict[str, Any]:
         """Approve or decline a service desk request approval
 
         Args:
@@ -1175,7 +1261,9 @@ class AtlassianClient:
         response = await self.make_request("POST", url, json=data)
         return response.json()
 
-    async def servicedesk_get_participants(self, issue_key: str) -> List[Dict[str, Any]]:
+    async def servicedesk_get_participants(
+        self, issue_key: str
+    ) -> List[Dict[str, Any]]:
         """Get participants for a service desk request"""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
@@ -1183,7 +1271,9 @@ class AtlassianClient:
         response = await self.make_request("GET", url)
         return response.json().get("values", [])
 
-    async def servicedesk_add_participants(self, issue_key: str, usernames: List[str]) -> Dict[str, Any]:
+    async def servicedesk_add_participants(
+        self, issue_key: str, usernames: List[str]
+    ) -> Dict[str, Any]:
         """Add participants to a service desk request"""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/participant"
@@ -1192,7 +1282,9 @@ class AtlassianClient:
         response = await self.make_request("POST", url, json=data)
         return response.json()
 
-    async def servicedesk_manage_notifications(self, issue_key: str, subscribe: bool) -> Dict[str, Any]:
+    async def servicedesk_manage_notifications(
+        self, issue_key: str, subscribe: bool
+    ) -> Dict[str, Any]:
         """Subscribe or unsubscribe from service desk request notifications"""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/notification"
@@ -1211,35 +1303,48 @@ class AtlassianClient:
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla"
 
         response = await self.make_request(
-            "GET", url,
-            operation_context={"name": "servicedesk_get_request_sla", "issue_key": issue_key}
+            "GET",
+            url,
+            operation_context={
+                "name": "servicedesk_get_request_sla",
+                "issue_key": issue_key,
+            },
         )
         return response.json().get("values", [])
 
-    async def servicedesk_get_sla_metric(self, issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
+    async def servicedesk_get_sla_metric(
+        self, issue_key: str, sla_metric_id: str
+    ) -> Dict[str, Any]:
         """Get detailed SLA metric information."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla/{sla_metric_id}"
 
         response = await self.make_request(
-            "GET", url,
+            "GET",
+            url,
             operation_context={
-                "name": "servicedesk_get_sla_metric", 
-                "issue_key": issue_key, 
-                "sla_metric_id": sla_metric_id
-            }
+                "name": "servicedesk_get_sla_metric",
+                "issue_key": issue_key,
+                "sla_metric_id": sla_metric_id,
+            },
         )
         return response.json()
 
     # Phase 3: Advanced Features - Attachment Management
-    async def servicedesk_get_request_attachments(self, issue_key: str) -> List[Dict[str, Any]]:
+    async def servicedesk_get_request_attachments(
+        self, issue_key: str
+    ) -> List[Dict[str, Any]]:
         """Get attachments for a service desk request."""
         cloud_id = await self.get_cloud_id()
         url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/attachment"
 
         response = await self.make_request(
-            "GET", url,
-            operation_context={"name": "servicedesk_get_request_attachments", "issue_key": issue_key}
+            "GET",
+            url,
+            operation_context={
+                "name": "servicedesk_get_request_attachments",
+                "issue_key": issue_key,
+            },
         )
         return response.json().get("values", [])
 
@@ -1256,9 +1361,14 @@ class AtlassianClient:
             params["serviceDeskId"] = service_desk_id
 
         response = await self.make_request(
-            "GET", url, params=params,
-            operation_context={"name": "servicedesk_search_knowledge_base",
-                              "query": query, "service_desk_id": service_desk_id}
+            "GET",
+            url,
+            params=params,
+            operation_context={
+                "name": "servicedesk_search_knowledge_base",
+                "query": query,
+                "service_desk_id": service_desk_id,
+            },
         )
         return response.json().get("values", [])
 
@@ -1274,14 +1384,14 @@ class AtlassianClient:
                 "status_code": response.status_code,
                 "url": url,
                 "response_text": response.text[:500],  # First 500 chars
-                "headers": dict(response.headers)
+                "headers": dict(response.headers),
             }
         except (httpx.HTTPError, ValueError, KeyError) as e:
             return {
                 "success": False,
                 "error": str(e),
                 "url": url,
-                "status_code": getattr(e, 'response', {}).get('status_code', 'unknown')
+                "status_code": getattr(e, "response", {}).get("status_code", "unknown"),
             }
 
     async def servicedesk_check_availability(self) -> Dict[str, Any]:
@@ -1297,22 +1407,27 @@ class AtlassianClient:
                 "available": True,
                 "service_desk_count": len(service_desks),
                 "service_desks": service_desks,
-                "message": (f"Jira Service Management is available with "
-                           f"{len(service_desks)} service desk(s) configured."),
-                "note": ("If other servicedesk_ tools fail with 404 errors, you may need to "
-                         "re-authenticate with: authenticate_atlassian()")
+                "message": (
+                    f"Jira Service Management is available with "
+                    f"{len(service_desks)} service desk(s) configured."
+                ),
+                "note": (
+                    "If other servicedesk_ tools fail with 404 errors, you may need to "
+                    "re-authenticate with: authenticate_atlassian()"
+                ),
             }
         except (httpx.HTTPError, ValueError, KeyError) as e:
             return {
                 "available": False,
                 "service_desk_count": 0,
                 "service_desks": [],
-                "message": f"Jira Service Management not available: {str(e)}"
+                "message": f"Jira Service Management not available: {str(e)}",
             }
 
 
 def handle_atlassian_errors(func):
     """Decorator to convert AtlassianError to ValueError for MCP compatibility."""
+
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         try:
@@ -1325,6 +1440,7 @@ def handle_atlassian_errors(func):
             if e.suggested_actions:
                 error_msg += f" Suggested actions: {'; '.join(e.suggested_actions)}"
             raise ValueError(error_msg) from e
+
     return wrapper
 
 
@@ -1371,7 +1487,9 @@ async def jira_get_issue(issue_key: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def jira_create_issue(project_key: str, summary: str, description: str, issue_type: str = "Task") -> Dict[str, Any]:
+async def jira_create_issue(
+    project_key: str, summary: str, description: str, issue_type: str = "Task"
+) -> Dict[str, Any]:
     """Create a new Jira issue.
 
     Args:
@@ -1382,12 +1500,15 @@ async def jira_create_issue(project_key: str, summary: str, description: str, is
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.jira_create_issue(project_key, summary, description, issue_type)
+    return await atlassian_client.jira_create_issue(
+        project_key, summary, description, issue_type
+    )
 
 
 @mcp.tool()
-async def jira_update_issue(issue_key: str, summary: Optional[str] = None,
-                           description: Optional[str] = None) -> Dict[str, Any]:
+async def jira_update_issue(
+    issue_key: str, summary: Optional[str] = None, description: Optional[str] = None
+) -> Dict[str, Any]:
     """Update an existing Jira issue."""
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
@@ -1424,8 +1545,9 @@ async def confluence_get_page(page_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def confluence_create_page(space_key: str, title: str, content: str,
-                                parent_id: Optional[str] = None) -> Dict[str, Any]:
+async def confluence_create_page(
+    space_key: str, title: str, content: str, parent_id: Optional[str] = None
+) -> Dict[str, Any]:
     """Create a new Confluence page.
 
     Args:
@@ -1436,11 +1558,15 @@ async def confluence_create_page(space_key: str, title: str, content: str,
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.confluence_create_page(space_key, title, content, parent_id)
+    return await atlassian_client.confluence_create_page(
+        space_key, title, content, parent_id
+    )
 
 
 @mcp.tool()
-async def confluence_update_page(page_id: str, title: str, content: str, version: int) -> Dict[str, Any]:
+async def confluence_update_page(
+    page_id: str, title: str, content: str, version: int
+) -> Dict[str, Any]:
     """Update an existing Confluence page.
 
     Args:
@@ -1451,13 +1577,16 @@ async def confluence_update_page(page_id: str, title: str, content: str, version
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.confluence_update_page(page_id, title, content, version)
+    return await atlassian_client.confluence_update_page(
+        page_id, title, content, version
+    )
 
 
 # Phase 1: Space Management Tools
 @mcp.tool()
-async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = None,
-                                status: str = "current") -> List[Dict[str, Any]]:
+async def confluence_list_spaces(
+    limit: int = 25, space_type: Optional[str] = None, status: str = "current"
+) -> List[Dict[str, Any]]:
     """List Confluence spaces.
 
     Args:
@@ -1471,7 +1600,9 @@ async def confluence_list_spaces(limit: int = 25, space_type: Optional[str] = No
 
 
 @mcp.tool()
-async def confluence_get_space(space_id: str, include_icon: bool = False) -> Dict[str, Any]:
+async def confluence_get_space(
+    space_id: str, include_icon: bool = False
+) -> Dict[str, Any]:
     """Get detailed information about a specific Confluence space.
 
     Args:
@@ -1484,7 +1615,9 @@ async def confluence_get_space(space_id: str, include_icon: bool = False) -> Dic
 
 
 @mcp.tool()
-async def confluence_get_space_pages(space_id: str, limit: int = 25, status: str = "current") -> List[Dict[str, Any]]:
+async def confluence_get_space_pages(
+    space_id: str, limit: int = 25, status: str = "current"
+) -> List[Dict[str, Any]]:
     """Get pages in a specific Confluence space.
 
     Args:
@@ -1499,7 +1632,9 @@ async def confluence_get_space_pages(space_id: str, limit: int = 25, status: str
 
 # Phase 2: Enhanced Search & Discovery Tools
 @mcp.tool()
-async def confluence_search_content(query: str, limit: int = 25, space_id: Optional[str] = None) -> List[Dict[str, Any]]:
+async def confluence_search_content(
+    query: str, limit: int = 25, space_id: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """Advanced search across Confluence content.
 
     Args:
@@ -1513,7 +1648,9 @@ async def confluence_search_content(query: str, limit: int = 25, space_id: Optio
 
 
 @mcp.tool()
-async def confluence_get_page_children(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+async def confluence_get_page_children(
+    page_id: str, limit: int = 25
+) -> List[Dict[str, Any]]:
     """Get child pages of a specific Confluence page.
 
     Args:
@@ -1527,7 +1664,9 @@ async def confluence_get_page_children(page_id: str, limit: int = 25) -> List[Di
 
 # Phase 3: Comments & Collaboration Tools
 @mcp.tool()
-async def confluence_get_page_comments(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+async def confluence_get_page_comments(
+    page_id: str, limit: int = 25
+) -> List[Dict[str, Any]]:
     """Get comments for a specific Confluence page.
 
     Args:
@@ -1540,7 +1679,9 @@ async def confluence_get_page_comments(page_id: str, limit: int = 25) -> List[Di
 
 
 @mcp.tool()
-async def confluence_add_comment(page_id: str, comment: str, parent_comment_id: Optional[str] = None) -> Dict[str, Any]:
+async def confluence_add_comment(
+    page_id: str, comment: str, parent_comment_id: Optional[str] = None
+) -> Dict[str, Any]:
     """Add a comment to a Confluence page.
 
     Args:
@@ -1550,7 +1691,9 @@ async def confluence_add_comment(page_id: str, comment: str, parent_comment_id: 
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.confluence_add_comment(page_id, comment, parent_comment_id)
+    return await atlassian_client.confluence_add_comment(
+        page_id, comment, parent_comment_id
+    )
 
 
 @mcp.tool()
@@ -1567,7 +1710,9 @@ async def confluence_get_comment(comment_id: str) -> Dict[str, Any]:
 
 # Phase 4: Labels & Organization Tools
 @mcp.tool()
-async def confluence_get_page_labels(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+async def confluence_get_page_labels(
+    page_id: str, limit: int = 25
+) -> List[Dict[str, Any]]:
     """Get labels for a specific Confluence page.
 
     Args:
@@ -1580,7 +1725,9 @@ async def confluence_get_page_labels(page_id: str, limit: int = 25) -> List[Dict
 
 
 @mcp.tool()
-async def confluence_search_by_label(label_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+async def confluence_search_by_label(
+    label_id: str, limit: int = 25
+) -> List[Dict[str, Any]]:
     """Find Confluence pages with a specific label.
 
     Args:
@@ -1593,7 +1740,9 @@ async def confluence_search_by_label(label_id: str, limit: int = 25) -> List[Dic
 
 
 @mcp.tool()
-async def confluence_list_labels(limit: int = 25, prefix: Optional[str] = None) -> List[Dict[str, Any]]:
+async def confluence_list_labels(
+    limit: int = 25, prefix: Optional[str] = None
+) -> List[Dict[str, Any]]:
     """List all Confluence labels with optional filtering.
 
     Args:
@@ -1607,7 +1756,9 @@ async def confluence_list_labels(limit: int = 25, prefix: Optional[str] = None) 
 
 # Phase 5: Attachments Tools
 @mcp.tool()
-async def confluence_get_page_attachments(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+async def confluence_get_page_attachments(
+    page_id: str, limit: int = 25
+) -> List[Dict[str, Any]]:
     """Get attachments for a specific Confluence page.
 
     Args:
@@ -1633,7 +1784,9 @@ async def confluence_get_attachment(attachment_id: str) -> Dict[str, Any]:
 
 # Phase 6: Version History Tools
 @mcp.tool()
-async def confluence_get_page_versions(page_id: str, limit: int = 25) -> List[Dict[str, Any]]:
+async def confluence_get_page_versions(
+    page_id: str, limit: int = 25
+) -> List[Dict[str, Any]]:
     """Get version history for a Confluence page.
 
     Args:
@@ -1646,7 +1799,9 @@ async def confluence_get_page_versions(page_id: str, limit: int = 25) -> List[Di
 
 
 @mcp.tool()
-async def confluence_get_page_version(page_id: str, version_number: int) -> Dict[str, Any]:
+async def confluence_get_page_version(
+    page_id: str, version_number: int
+) -> Dict[str, Any]:
     """Get a specific version of a Confluence page.
 
     Args:
@@ -1659,8 +1814,9 @@ async def confluence_get_page_version(page_id: str, version_number: int) -> Dict
 
 
 @mcp.tool()
-async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit: int = 50,
-                                  start: int = 0) -> List[Dict[str, Any]]:
+async def servicedesk_get_requests(
+    service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0
+) -> List[Dict[str, Any]]:
     """Get service desk requests with pagination support.
 
     Args:
@@ -1670,7 +1826,9 @@ async def servicedesk_get_requests(service_desk_id: Optional[str] = None, limit:
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_get_requests(service_desk_id, limit, start)
+    return await atlassian_client.servicedesk_get_requests(
+        service_desk_id, limit, start
+    )
 
 
 @mcp.tool()
@@ -1682,8 +1840,9 @@ async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
 
 
 @mcp.tool()
-async def servicedesk_create_request(service_desk_id: str, request_type_id: str,
-                                    summary: str, description: str) -> Dict[str, Any]:
+async def servicedesk_create_request(
+    service_desk_id: str, request_type_id: str, summary: str, description: str
+) -> Dict[str, Any]:
     """Create a new service desk request.
 
     Args:
@@ -1694,11 +1853,15 @@ async def servicedesk_create_request(service_desk_id: str, request_type_id: str,
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_create_request(service_desk_id, request_type_id, summary, description)
+    return await atlassian_client.servicedesk_create_request(
+        service_desk_id, request_type_id, summary, description
+    )
 
 
 @mcp.tool()
-async def servicedesk_add_comment(issue_key: str, comment: str, public: bool = True) -> Dict[str, Any]:
+async def servicedesk_add_comment(
+    issue_key: str, comment: str, public: bool = True
+) -> Dict[str, Any]:
     """Add a comment to a service desk request.
 
     Args:
@@ -1728,7 +1891,9 @@ async def servicedesk_get_approvals(issue_key: str) -> List[Dict[str, Any]]:
 
 
 @mcp.tool()
-async def servicedesk_approve_request(issue_key: str, approval_id: str, decision: str) -> Dict[str, Any]:
+async def servicedesk_approve_request(
+    issue_key: str, approval_id: str, decision: str
+) -> Dict[str, Any]:
     """Approve or decline a service desk request approval.
 
     Args:
@@ -1738,7 +1903,9 @@ async def servicedesk_approve_request(issue_key: str, approval_id: str, decision
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_approve_request(issue_key, approval_id, decision)
+    return await atlassian_client.servicedesk_approve_request(
+        issue_key, approval_id, decision
+    )
 
 
 @mcp.tool()
@@ -1750,7 +1917,9 @@ async def servicedesk_get_participants(issue_key: str) -> List[Dict[str, Any]]:
 
 
 @mcp.tool()
-async def servicedesk_add_participants(issue_key: str, usernames: List[str]) -> Dict[str, Any]:
+async def servicedesk_add_participants(
+    issue_key: str, usernames: List[str]
+) -> Dict[str, Any]:
     """Add participants to a service desk request.
 
     🚨 CRITICAL: DO NOT call this tool without explicit user confirmation first!
@@ -1774,7 +1943,9 @@ async def servicedesk_add_participants(issue_key: str, usernames: List[str]) -> 
 
 
 @mcp.tool()
-async def servicedesk_manage_notifications(issue_key: str, subscribe: bool) -> Dict[str, Any]:
+async def servicedesk_manage_notifications(
+    issue_key: str, subscribe: bool
+) -> Dict[str, Any]:
     """Subscribe or unsubscribe from service desk request notifications.
 
     Args:
@@ -1854,7 +2025,9 @@ async def servicedesk_get_service_desk(service_desk_id: str) -> Dict[str, Any]:
 
 @mcp.tool()
 @handle_atlassian_errors
-async def servicedesk_list_request_types(service_desk_id: Optional[str] = None, limit: int = 50) -> List[Dict[str, Any]]:
+async def servicedesk_list_request_types(
+    service_desk_id: Optional[str] = None, limit: int = 50
+) -> List[Dict[str, Any]]:
     """List available request types for creating service desk requests.
 
     Essential for AI agents to discover request types before creating requests.
@@ -1886,7 +2059,9 @@ async def servicedesk_list_request_types(service_desk_id: Optional[str] = None, 
 
 
 @mcp.tool()
-async def servicedesk_get_request_type(service_desk_id: str, request_type_id: str) -> Dict[str, Any]:
+async def servicedesk_get_request_type(
+    service_desk_id: str, request_type_id: str
+) -> Dict[str, Any]:
     """Get detailed information about a specific request type.
 
     Args:
@@ -1898,11 +2073,15 @@ async def servicedesk_get_request_type(service_desk_id: str, request_type_id: st
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_get_request_type(service_desk_id, request_type_id)
+    return await atlassian_client.servicedesk_get_request_type(
+        service_desk_id, request_type_id
+    )
 
 
 @mcp.tool()
-async def servicedesk_get_request_type_fields(service_desk_id: str, request_type_id: str) -> List[Dict[str, Any]]:
+async def servicedesk_get_request_type_fields(
+    service_desk_id: str, request_type_id: str
+) -> List[Dict[str, Any]]:
     """Get required and optional fields for a specific request type.
 
     Essential for understanding what fields are needed when creating requests.
@@ -1920,12 +2099,16 @@ async def servicedesk_get_request_type_fields(service_desk_id: str, request_type
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_get_request_type_fields(service_desk_id, request_type_id)
+    return await atlassian_client.servicedesk_get_request_type_fields(
+        service_desk_id, request_type_id
+    )
 
 
 # Phase 2: Enhanced Request Management
 @mcp.tool()
-async def servicedesk_get_request_comments(issue_key: str, limit: int = 50) -> List[Dict[str, Any]]:
+async def servicedesk_get_request_comments(
+    issue_key: str, limit: int = 50
+) -> List[Dict[str, Any]]:
     """Get comments for a service desk request.
 
     Args:
@@ -1957,14 +2140,14 @@ async def servicedesk_get_request_transitions(issue_key: str) -> List[Dict[str, 
         # Use transitions[0]["id"] with servicedesk_transition_request()
     """
     if not atlassian_client or not atlassian_client.config.access_token:
-        raise ValueError(
-            "Not authenticated. Use authenticate_atlassian tool first."
-        )
+        raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
     return await atlassian_client.servicedesk_get_request_transitions(issue_key)
 
 
 @mcp.tool()
-async def servicedesk_transition_request(issue_key: str, transition_id: str, comment: Optional[str] = None) -> Dict[str, Any]:
+async def servicedesk_transition_request(
+    issue_key: str, transition_id: str, comment: Optional[str] = None
+) -> Dict[str, Any]:
     """Transition a service desk request to a new status.
 
     Args:
@@ -1983,10 +2166,13 @@ async def servicedesk_transition_request(issue_key: str, transition_id: str, com
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_transition_request(issue_key, transition_id, comment)
+    return await atlassian_client.servicedesk_transition_request(
+        issue_key, transition_id, comment
+    )
 
 
 # Phase 3: Advanced Features - MCP Tools
+
 
 @mcp.tool()
 @handle_atlassian_errors
@@ -2008,7 +2194,9 @@ async def servicedesk_get_request_sla(issue_key: str) -> List[Dict[str, Any]]:
 
 @mcp.tool()
 @handle_atlassian_errors
-async def servicedesk_get_sla_metric(issue_key: str, sla_metric_id: str) -> Dict[str, Any]:
+async def servicedesk_get_sla_metric(
+    issue_key: str, sla_metric_id: str
+) -> Dict[str, Any]:
     """Get detailed information about a specific SLA metric.
 
     Args:
@@ -2041,8 +2229,9 @@ async def servicedesk_get_request_attachments(issue_key: str) -> List[Dict[str, 
 
 @mcp.tool()
 @handle_atlassian_errors
-async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optional[str] = None,
-                                           limit: int = 10) -> List[Dict[str, Any]]:
+async def servicedesk_search_knowledge_base(
+    query: str, service_desk_id: Optional[str] = None, limit: int = 10
+) -> List[Dict[str, Any]]:
     """Search knowledge base articles for relevant information.
 
     Args:
@@ -2055,7 +2244,9 @@ async def servicedesk_search_knowledge_base(query: str, service_desk_id: Optiona
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
-    return await atlassian_client.servicedesk_search_knowledge_base(query, service_desk_id, limit)
+    return await atlassian_client.servicedesk_search_knowledge_base(
+        query, service_desk_id, limit
+    )
 
 
 async def initialize_client():
@@ -2065,12 +2256,12 @@ async def initialize_client():
     client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
 
     if not all([site_url, client_id, client_secret]):
-        raise ValueError("ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, and ATLASSIAN_CLIENT_SECRET must be set")
+        raise ValueError(
+            "ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, and ATLASSIAN_CLIENT_SECRET must be set"
+        )
 
     config = AtlassianConfig(
-        site_url=site_url,
-        client_id=client_id,
-        client_secret=client_secret
+        site_url=site_url, client_id=client_id, client_secret=client_secret
     )
 
     return AtlassianClient(config)
