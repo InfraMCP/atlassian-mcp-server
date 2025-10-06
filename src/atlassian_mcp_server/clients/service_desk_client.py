@@ -349,10 +349,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         IT asset management capabilities.
         """
         cloud_id = await self.get_cloud_id()
-        url = (
-            f"https://api.atlassian.com/jsm/assets/workspace/"
-            f"{cloud_id}/v1/workspace/list"
-        )
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace"
         params = {"start": start, "limit": limit}
 
         response = await self.make_request("GET", url, params=params)
