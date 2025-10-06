@@ -42,6 +42,26 @@ class ServiceDeskModule(BaseModule):
             return await self.client.servicedesk_check_availability()
 
         @server.tool()
+        async def servicedesk_list_service_desks(limit: int = 50) -> List[Dict[str, Any]]:
+            """List available service desks for creating requests."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.servicedesk_list_service_desks(limit)
+
+        @server.tool()
+        async def servicedesk_list_request_types(
+            service_desk_id: Optional[str] = None, limit: int = 50
+        ) -> List[Dict[str, Any]]:
+            """List available request types for creating service desk requests."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.servicedesk_list_request_types(service_desk_id, limit)
+
+        @server.tool()
         async def servicedesk_get_requests(
             service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0
         ) -> List[Dict[str, Any]]:
