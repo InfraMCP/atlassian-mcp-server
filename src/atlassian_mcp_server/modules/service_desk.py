@@ -62,6 +62,48 @@ class ServiceDeskModule(BaseModule):
             response = await self.client.make_request("GET", url, params=params)
             return response.get("values", [])
 
+        @server.call_tool()
+        async def servicedesk_get_requests(
+            service_desk_id: Optional[str] = None, limit: int = 50, start: int = 0
+        ) -> List[Dict[str, Any]]:
+            """Get service desk requests with pagination support."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+            return await self.client.servicedesk_get_requests(service_desk_id, limit, start)
+
+        @server.call_tool()
+        async def servicedesk_get_request(issue_key: str) -> Dict[str, Any]:
+            """Get detailed information about a specific service desk request."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+            return await self.client.servicedesk_get_request(issue_key)
+
+        @server.call_tool()
+        async def servicedesk_create_request(
+            service_desk_id: str,
+            request_type_id: str,
+            summary: str,
+            description: str
+        ) -> Dict[str, Any]:
+            """Create a new service desk request."""
+            if not self.client or not self.client.config.access_token:
+                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+            return await self.client.servicedesk_create_request(
+                service_desk_id, request_type_id, summary, description
+            )
+
+        @server.call_tool()
+        async def servicedesk_check_availability() -> Dict[str, Any]:
+            """Check if Jira Service Management is available and configured on this
+            Atlassian instance.
+
+            Use this tool first to verify Service Management is set up before using
+            other servicedesk_ tools.
+            """
+            if not self.client or not self.client.config.access_token:
+                raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
+            return await self.client.servicedesk_check_availability()
+
         # Store reference for use in resources
         self._assets_list_workspaces = assets_list_workspaces
 
