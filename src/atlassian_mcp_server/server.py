@@ -1320,7 +1320,10 @@ class AtlassianClient:
     ) -> Dict[str, Any]:
         """Get detailed SLA metric information."""
         cloud_id = await self.get_cloud_id()
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/{issue_key}/sla/{sla_metric_id}"
+        url = (
+            f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/request/"
+            f"{issue_key}/sla/{sla_metric_id}"
+        )
 
         response = await self.make_request(
             "GET",
@@ -1928,7 +1931,8 @@ async def servicedesk_add_participants(
     🚨 CRITICAL: DO NOT call this tool without explicit user confirmation first!
 
     REQUIRED WORKFLOW:
-    1. ALWAYS ask user: "Adding participants will subscribe them to notifications for ticket {issue_key}.
+    1. ALWAYS ask user: "Adding participants will subscribe them to 
+       notifications for ticket {issue_key}.
        Users {usernames} will receive emails for all updates and can view/comment on the ticket.
        Do you want to proceed? (yes/no)"
     2. ONLY call this tool if user explicitly confirms with "yes"
@@ -1974,9 +1978,11 @@ async def servicedesk_debug_request(endpoint: str) -> Dict[str, Any]:
 
 @mcp.tool()
 async def servicedesk_check_availability() -> Dict[str, Any]:
-    """Check if Jira Service Management is available and configured on this Atlassian instance.
+    """Check if Jira Service Management is available and configured on this 
+    Atlassian instance.
 
-    Use this tool first to verify Service Management is set up before using other servicedesk_ tools.
+    Use this tool first to verify Service Management is set up before using 
+    other servicedesk_ tools.
     """
     if not atlassian_client or not atlassian_client.config.access_token:
         raise ValueError("Not authenticated. Use authenticate_atlassian tool first.")
@@ -2149,15 +2155,16 @@ async def servicedesk_get_request_transitions(issue_key: str) -> List[Dict[str, 
 
 @mcp.tool()
 async def servicedesk_transition_request(
-    issue_key: str, 
-    transition_id: str, 
+    issue_key: str,
+    transition_id: str,
     comment: Optional[str] = None
 ) -> Dict[str, Any]:
     """Transition a service desk request to a new status.
 
     Args:
         issue_key: Service desk request key (e.g., "HELP-123")
-        transition_id: ID of the transition to perform (get from servicedesk_get_request_transitions)
+        transition_id: ID of the transition to perform (get from 
+                      servicedesk_get_request_transitions)
         comment: Optional comment to add with the transition
 
     Returns:
