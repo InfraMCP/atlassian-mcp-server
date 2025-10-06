@@ -117,7 +117,7 @@ class OAuthCallbackHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
-    def log_message(self, fmt, *args):
+    def log_message(self, format, *args):  # pylint: disable=redefined-builtin
         """Suppress HTTP server log messages."""
 
 
@@ -2269,7 +2269,7 @@ async def initialize_client():
 
 def main():
     """Main entry point."""
-    global atlassian_client
+    global atlassian_client  # pylint: disable=global-statement
     try:
         # Initialize client
         atlassian_client = asyncio.run(initialize_client())
