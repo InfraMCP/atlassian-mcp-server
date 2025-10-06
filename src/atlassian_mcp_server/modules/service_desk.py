@@ -96,6 +96,21 @@ class ServiceDeskModule(BaseModule):
                 service_desk_id, request_type_id, summary, description
             )
 
+        @server.tool()
+        async def assets_list_workspaces(
+            start: int = 0, limit: int = 50
+        ) -> List[Dict[str, Any]]:
+            """List Assets workspaces available in Jira Service Management.
+            
+            Assets (formerly Insight) provides IT asset management capabilities
+            within Jira Service Management.
+            """
+            if not self.client or not self.client.config.access_token:
+                raise ValueError(
+                    "Not authenticated. Use authenticate_atlassian tool first."
+                )
+            return await self.client.assets_list_workspaces(start, limit)
+
     def register_resources(self, server: Server) -> None:
         """Register Service Desk resources."""
         # Resources will be added here if needed in the future

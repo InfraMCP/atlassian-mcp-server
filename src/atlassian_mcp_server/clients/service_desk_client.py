@@ -339,3 +339,18 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
                 "service_desks": [],
                 "message": f"Jira Service Management not available: {str(e)}",
             }
+
+    async def assets_list_workspaces(
+        self, start: int = 0, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """List Assets workspaces available in Jira Service Management.
+        
+        Assets (formerly Insight) is part of Jira Service Management and provides
+        IT asset management capabilities.
+        """
+        cloud_id = await self.get_cloud_id()
+        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace"
+        params = {"start": start, "limit": limit}
+
+        response = await self.make_request("GET", url, params=params)
+        return response.json().get("values", [])
