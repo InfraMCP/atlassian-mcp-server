@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import httpx
+import pytest
 
 
 async def test_atlassian_functionality():
@@ -13,8 +14,7 @@ async def test_atlassian_functionality():
 
     token_file = Path.home() / ".atlassian_test_tokens.json"
     if not token_file.exists():
-        print("❌ No test tokens found. Run test_oauth.py first.")
-        return False
+        pytest.skip("No test tokens found. Run test_oauth.py first.")
 
     with open(token_file, "r") as f:
         tokens = json.load(f)
@@ -32,8 +32,7 @@ async def test_atlassian_functionality():
             headers=headers,
         )
         if response.status_code != 200:
-            print(f"❌ Failed to get accessible resources: {response.status_code}")
-            return False
+            pytest.fail(f"Failed to get accessible resources: {response.status_code}")
 
         resources = response.json()
         cloud_id = None
@@ -44,8 +43,7 @@ async def test_atlassian_functionality():
                 break
 
         if not cloud_id:
-            print("❌ No Jira-enabled resource found")
-            return False
+            pytest.fail("No Jira-enabled resource found")
 
         print(f"🎯 TESTING ATLASSIAN MCP FUNCTIONALITY")
         print("=" * 50)
@@ -176,8 +174,7 @@ async def test_atlassian_functionality():
             print("🎉 All tests passed! MCP server functionality is working correctly.")
             return True
         else:
-            print("⚠️  Some tests failed. Check the output above for details.")
-            return False
+            pytest.fail("Some tests failed. Check the output above for details.")
 
 
 if __name__ == "__main__":

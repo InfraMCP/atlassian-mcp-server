@@ -15,6 +15,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlparse
 
 import httpx
+import pytest
 
 
 class OAuthCallbackHandler(BaseHTTPRequestHandler):
@@ -53,9 +54,7 @@ async def test_oauth_flow():
     client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
 
     if not all([site_url, client_id, client_secret]):
-        print("❌ Missing environment variables:")
-        print("   Set ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET")
-        return False
+        pytest.skip("Missing environment variables: ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET")
 
     # Start callback server
     server = HTTPServer(("localhost", 8080), OAuthCallbackHandler)

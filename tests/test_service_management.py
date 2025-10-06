@@ -3,6 +3,7 @@
 
 import asyncio
 import os
+import pytest
 import sys
 from pathlib import Path
 
@@ -21,9 +22,7 @@ async def test_service_management():
     client_secret = os.getenv("ATLASSIAN_CLIENT_SECRET")
 
     if not all([site_url, client_id, client_secret]):
-        print("❌ Missing required environment variables:")
-        print("   ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET")
-        return False
+        pytest.skip("Missing required environment variables: ATLASSIAN_SITE_URL, ATLASSIAN_CLIENT_ID, ATLASSIAN_CLIENT_SECRET")
 
     config = AtlassianConfig(
         site_url=site_url, client_id=client_id, client_secret=client_secret
@@ -33,8 +32,7 @@ async def test_service_management():
 
     # Load existing credentials
     if not await client.load_credentials():
-        print("❌ No valid credentials found. Run test_oauth.py first.")
-        return False
+        pytest.skip("No valid credentials found. Run test_oauth.py first.")
 
     print("🔧 Testing Service Management functionality...")
 
@@ -76,8 +74,7 @@ async def test_service_management():
         return True
 
     except Exception as e:
-        print(f"❌ Service Management test failed: {e}")
-        return False
+        pytest.fail(f"Service Management test failed: {e}")
 
     finally:
         await client.client.aclose()
