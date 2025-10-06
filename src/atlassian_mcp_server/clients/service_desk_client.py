@@ -1,5 +1,8 @@
 """
 Service Desk client for Atlassian Cloud API operations.
+
+Handles Jira Service Management operations including service desk requests,
+approvals, participants, and Assets (CMDB) management.
 """
 
 import logging
