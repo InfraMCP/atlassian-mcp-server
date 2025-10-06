@@ -170,8 +170,8 @@ class BaseAtlassianClient:
                 "write:servicedesk-request",
                 "manage:servicedesk-customer",
                 "read:knowledgebase:jira-service-management",
-                "read:assets:jira-service-management",
-                "write:assets:jira-service-management",
+                "read:cmdb-object:jira",
+                "write:cmdb-object:jira",
                 "read:me",
                 "offline_access",
             ]
