@@ -19,7 +19,7 @@ class ConfluenceModule(BaseModule):
 
     @property
     def required_scopes(self) -> List[str]:
-        return [
+        return [  # pylint: disable=duplicate-code
             "read:page:confluence",
             "read:space:confluence",
             "write:page:confluence",

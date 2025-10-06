@@ -155,7 +155,7 @@ class BaseAtlassianClient:
             self.code_verifier = code_verifier
             state = secrets.token_urlsafe(32)
 
-            scopes = [
+            scopes = [  # pylint: disable=duplicate-code
                 "read:jira-work",
                 "read:jira-user",
                 "write:jira-work",
