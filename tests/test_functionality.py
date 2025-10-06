@@ -32,7 +32,10 @@ async def test_atlassian_functionality():
             headers=headers,
         )
         if response.status_code != 200:
-            pytest.fail(f"Failed to get accessible resources: {response.status_code}")
+            if response.status_code == 401:
+                pytest.skip("Tokens expired or invalid. Run test_oauth.py to refresh.")
+            else:
+                pytest.fail(f"Failed to get accessible resources: {response.status_code}")
 
         resources = response.json()
         cloud_id = None
