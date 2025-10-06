@@ -349,7 +349,10 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
         IT asset management capabilities.
         """
         cloud_id = await self.get_cloud_id()
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace"
+        url = (
+            f"https://api.atlassian.com/jsm/assets/workspace/"
+            f"{cloud_id}/v1/workspace/list"
+        )
         params = {"start": start, "limit": limit}
 
         response = await self.make_request("GET", url, params=params)
@@ -376,7 +379,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
     ) -> Dict[str, Any]:
         """Create a new object in Assets workspace."""
         cloud_id = await self.get_cloud_id()
-        url = f"{self.jira_base}/{cloud_id}/rest/servicedeskapi/assets/workspace/{workspace_id}/v1/object/create"
+        url = f"https://api.atlassian.com/jsm/assets/workspace/{cloud_id}/v1/object/create"
         
         data = {
             "objectTypeId": object_type_id,
