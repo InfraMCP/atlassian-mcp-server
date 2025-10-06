@@ -18,6 +18,7 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
     def __init__(self, config):
         super().__init__(config)
         self.jira_base = "https://api.atlassian.com/ex/jira"
+        self.load_credentials()  # Load saved credentials
 
     async def servicedesk_list_service_desks(
         self, limit: int = 50

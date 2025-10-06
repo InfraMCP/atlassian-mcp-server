@@ -15,6 +15,7 @@ class ConfluenceClient(BaseAtlassianClient):
     def __init__(self, config):
         super().__init__(config)
         self.confluence_base = "https://api.atlassian.com/ex/confluence"
+        self.load_credentials()  # Load saved credentials
 
     async def confluence_search(
         self, query: str, limit: int = 10

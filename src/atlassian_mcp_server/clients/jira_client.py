@@ -13,6 +13,7 @@ class JiraClient(BaseAtlassianClient):
     def __init__(self, config):
         super().__init__(config)
         self.jira_base = "https://api.atlassian.com/ex/jira"
+        self.load_credentials()  # Load saved credentials
 
     async def jira_search(
         self, jql: str, max_results: int = 50
