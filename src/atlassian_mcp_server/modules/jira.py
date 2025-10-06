@@ -18,8 +18,6 @@ class JiraModule(BaseModule):
 
     def register_tools(self, server: Server) -> None:
         """Register Jira tools."""
-        # TODO: Extract Jira tools from server.py
 
     def register_resources(self, server: Server) -> None:
         """Register Jira resources."""
-        # TODO: Extract Jira resources from server.py

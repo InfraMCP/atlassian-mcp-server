@@ -26,8 +26,6 @@ class ConfluenceModule(BaseModule):
 
     def register_tools(self, server: Server) -> None:
         """Register Confluence tools."""
-        # TODO: Extract Confluence tools from server.py
 
     def register_resources(self, server: Server) -> None:
         """Register Confluence resources."""
-        # TODO: Extract Confluence resources from server.py

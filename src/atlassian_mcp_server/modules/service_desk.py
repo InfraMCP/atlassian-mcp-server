@@ -65,8 +65,6 @@ class ServiceDeskModule(BaseModule):
         # Store reference for use in resources
         self._assets_list_workspaces = assets_list_workspaces
 
-        # TODO: Extract other Service Desk tools from server.py
-
     def register_resources(self, server: Server) -> None:
         """Register Service Desk resources including Assets."""
 
@@ -98,5 +96,3 @@ class ServiceDeskModule(BaseModule):
                     return f"Error fetching Assets workspaces: {str(e)}"
 
             raise ValueError(f"Unknown resource: {uri}")
-
-        # TODO: Extract other Service Desk resources from server.py
