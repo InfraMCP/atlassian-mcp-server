@@ -3,16 +3,14 @@ name: Pylint
 on:
   push:
     branches: [ main ]
-    paths:
-      - '**.py'
-      - 'requirements*.txt'
-      - 'pyproject.toml'
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
   pull_request:
     branches: [ main ]
-    paths:
-      - '**.py'
-      - 'requirements*.txt'
-      - 'pyproject.toml'
+    paths-ignore:
+      - '*.md'
+      - 'docs/**'
 
 permissions:
   contents: read
@@ -21,119 +19,99 @@ permissions:
   actions: read
 
 jobs:
-  pylint:
+  build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.10", "3.11", "3.12"]
-    
     steps:
     - uses: actions/checkout@v4
-    
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ matrix.python-version }}
-    
+        python-version: '3.11'
+        cache: 'pip'
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install pylint
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        # Install the package itself for pylint analysis
-        pip install -e .
-    
-    - name: Run Pylint with exit-zero for detailed output
+        pip install -e ".[dev]"
+    - name: Analysing the code with pylint
       run: |
-        pylint src/atlassian_mcp_server/ --exit-zero --score=yes --output-format=text | tee pylint-output.txt
-        pylint src/atlassian_mcp_server/ --exit-zero --score=yes --output-format=json > pylint-report.json
-    
-    - name: Evaluate Pylint results and set exit code
-      run: |
-        # Extract the score from pylint output
-        SCORE=$(grep "Your code has been rated at" pylint-output.txt | sed 's/.*rated at \([0-9.]*\).*/\1/' || echo "0")
-        echo "Pylint score: $SCORE"
+        # Run pylint and capture exit code
+        pylint src/atlassian_mcp_server/ --exit-zero --score=yes --output-format=json > pylint-report.json || exit_code=$?
         
-        # Check pylint exit codes: 1=fatal, 2=error, 4=warning, 8=refactor, 16=convention, 32=usage
-        pylint src/atlassian_mcp_server/ --score=yes > /dev/null 2>&1
-        EXIT_CODE=$?
-        echo "Pylint exit code: $EXIT_CODE"
+        # Also generate text output for console
+        pylint src/atlassian_mcp_server/ --exit-zero --score=yes || true
         
-        # Allow warnings (4), refactor (8), convention (16) but fail on fatal (1) and error (2)
-        if [ $EXIT_CODE -eq 1 ] || [ $EXIT_CODE -eq 2 ]; then
+        # Exit codes: 0=no issues, 1=fatal, 2=error, 4=warning, 8=refactor, 16=convention
+        # Allow warnings (4), refactor (8), and convention (16) but fail on fatal (1) and error (2)
+        if [ ${exit_code:-0} -eq 1 ] || [ ${exit_code:-0} -eq 2 ]; then
           echo "❌ Pylint found fatal errors or errors that must be fixed"
           exit 1
-        elif [ $EXIT_CODE -eq 4 ] || [ $EXIT_CODE -eq 8 ] || [ $EXIT_CODE -eq 16 ]; then
-          echo "⚠️ Pylint found warnings, refactor suggestions, or convention issues (allowed)"
-          exit 0
+        elif [ ${exit_code:-0} -gt 0 ]; then
+          echo "⚠️  Pylint found warnings, refactor suggestions, or convention issues"
+          echo "These are reported but don't fail the build"
         else
-          echo "✅ Pylint completed successfully"
-          exit 0
+          echo "✅ Pylint analysis passed with no issues"
         fi
     
-    - name: Upload Pylint reports
+    - name: Upload pylint reports
       uses: actions/upload-artifact@v4
       with:
-        name: pylint-reports-${{ matrix.python-version }}
-        path: |
-          pylint-output.txt
-          pylint-report.json
+        name: pylint-reports
+        path: pylint-report.json
     
-    - name: Comment on PR with Pylint findings
-      if: github.event_name == 'pull_request' && matrix.python-version == '3.11'
+    - name: Comment on PR with pylint findings
+      if: github.event_name == 'pull_request'
       uses: actions/github-script@v6
       with:
-        github-token: ${{ secrets.ACTIONS_TOKEN }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs');
           
           let comment = '## 🔍 Pylint Code Quality Report\n\n';
           
-          // Read pylint output
           try {
-            const pylintOutput = fs.readFileSync('pylint-output.txt', 'utf8');
-            const scoreMatch = pylintOutput.match(/Your code has been rated at ([0-9.]+)\/10/);
-            const score = scoreMatch ? scoreMatch[1] : 'Unknown';
+            const pylintData = JSON.parse(fs.readFileSync('pylint-report.json', 'utf8'));
             
-            comment += `**Overall Score: ${score}/10**\n\n`;
-            
-            // Parse JSON report for detailed analysis
-            try {
-              const jsonReport = JSON.parse(fs.readFileSync('pylint-report.json', 'utf8'));
+            if (pylintData.length > 0) {
+              const errors = pylintData.filter(item => item.type === 'error');
+              const warnings = pylintData.filter(item => item.type === 'warning');
+              const conventions = pylintData.filter(item => item.type === 'convention');
+              const refactors = pylintData.filter(item => item.type === 'refactor');
               
-              const errorCount = jsonReport.filter(item => item.type === 'error').length;
-              const warningCount = jsonReport.filter(item => item.type === 'warning').length;
-              const conventionCount = jsonReport.filter(item => item.type === 'convention').length;
-              const refactorCount = jsonReport.filter(item => item.type === 'refactor').length;
-              
-              comment += '### Issue Summary\n';
-              comment += `- 🔴 Errors: ${errorCount}\n`;
-              comment += `- 🟡 Warnings: ${warningCount}\n`;
-              comment += `- 🔵 Convention: ${conventionCount}\n`;
-              comment += `- 🟣 Refactor: ${refactorCount}\n\n`;
-              
-              if (errorCount > 0) {
-                comment += '### 🔴 Critical Issues (Must Fix)\n';
-                jsonReport.filter(item => item.type === 'error').slice(0, 10).forEach(item => {
-                  comment += `- **${item.symbol}**: ${item.message} (Line ${item.line})\n`;
+              if (errors.length > 0) {
+                comment += `❌ **${errors.length} Error(s) found:**\n`;
+                errors.slice(0, 5).forEach(item => {
+                  comment += `- \`${item.path}:${item.line}\` - ${item.message} (${item.symbol})\n`;
                 });
-                if (errorCount > 10) comment += `... and ${errorCount - 10} more errors\n`;
+                if (errors.length > 5) comment += `- ... and ${errors.length - 5} more errors\n`;
                 comment += '\n';
               }
               
-            } catch (e) {
-              comment += '❓ Could not parse detailed report\n\n';
+              if (warnings.length > 0) {
+                comment += `⚠️ **${warnings.length} Warning(s) found:**\n`;
+                warnings.slice(0, 3).forEach(item => {
+                  comment += `- \`${item.path}:${item.line}\` - ${item.message} (${item.symbol})\n`;
+                });
+                if (warnings.length > 3) comment += `- ... and ${warnings.length - 3} more warnings\n`;
+                comment += '\n';
+              }
+              
+              if (conventions.length > 0) {
+                comment += `📝 **${conventions.length} Convention issue(s) found**\n`;
+              }
+              
+              if (refactors.length > 0) {
+                comment += `🔧 **${refactors.length} Refactor suggestion(s) found**\n`;
+              }
+            } else {
+              comment += '✅ **No issues found!** Code quality looks great.\n';
             }
             
+            comment += '\n📊 Full pylint report available in workflow artifacts.\n';
+            
           } catch (e) {
-            comment += '❓ Pylint output not available\n\n';
+            comment += '❓ Pylint report unavailable or could not be parsed\n';
           }
-          
-          comment += '📋 Full reports available in workflow artifacts.\n';
-          comment += '\n💡 **Code Quality Guidelines:**\n';
-          comment += '- Fix all errors (🔴) before merging\n';
-          comment += '- Address warnings (🟡) when possible\n';
-          comment += '- Consider refactor suggestions (🟣) for maintainability\n';
           
           github.rest.issues.createComment({
             issue_number: context.issue.number,

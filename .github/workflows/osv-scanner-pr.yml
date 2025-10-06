@@ -14,6 +14,8 @@ permissions:
   security-events: write
   # Only need to read contents
   contents: read
+  # Required for PR comments
+  pull-requests: write
 
 jobs:
   scan-pr:

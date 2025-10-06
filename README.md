@@ -5,19 +5,30 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Code Quality](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/pylint.yml/badge.svg)](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/pylint.yml)
 [![Dependency Security](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/dependency-security.yml/badge.svg)](https://github.com/rorymcmahon/atlassian-mcp-server/actions/workflows/dependency-security.yml)
-[![Downloads](https://pepy.tech/badge/atlassian-mcp-server)](https://pepy.tech/project/atlassian-mcp-server)
-[![GitHub stars](https://img.shields.io/github/stars/rorymcmahon/atlassian-mcp-server.svg)](https://github.com/rorymcmahon/atlassian-mcp-server/stargazers)
 
 MCP server for Atlassian Cloud (Confluence & Jira) with seamless OAuth 2.0 authentication. This server enables AI agents to help users document work in Confluence, manage Jira issues, and understand project context.
 
 ## Features
 
 - **Seamless OAuth 2.0 Flow**: Automatic browser-based authentication with PKCE security
+- **Modular Architecture**: Specialized client classes for Jira, Confluence, and Service Desk operations
+- **Selective Module Loading**: Configure which modules to load using environment variables
 - **Jira Integration**: Search, create, and update issues; add comments; manage work
 - **Confluence Integration**: Search and read content for context understanding
 - **Service Management**: Access support tickets and requests
 - **Automatic Token Management**: Handles token refresh automatically
 - **Minimal Permissions**: Follows least privilege principle with only required scopes
+
+## Architecture
+
+The server uses a modular architecture with specialized client classes:
+
+- **BaseAtlassianClient**: Core OAuth 2.0 authentication and HTTP request handling
+- **JiraClient**: Jira-specific operations (issues, projects, comments)
+- **ConfluenceClient**: Confluence-specific operations (pages, spaces, search)
+- **ServiceDeskClient**: Service Management operations (requests, approvals, Assets CMDB)
+
+Each module can be independently enabled/disabled for optimal performance and security.
 
 ## Use Cases
 
@@ -177,6 +188,22 @@ export ATLASSIAN_CLIENT_ID="your-oauth-client-id"
 export ATLASSIAN_CLIENT_SECRET="your-oauth-client-secret"
 ```
 
+### Optional Configuration
+
+**Module Selection**: Control which modules are loaded (default: all modules enabled):
+```bash
+export ATLASSIAN_MODULES="jira,confluence,service_desk"  # Enable specific modules
+export ATLASSIAN_MODULES="jira,confluence"              # Enable only Jira and Confluence
+export ATLASSIAN_MODULES="jira"                         # Enable only Jira
+```
+
+Available modules:
+- `jira` - Jira issue management and project operations
+- `confluence` - Confluence page and space operations  
+- `service_desk` - Service Management and Assets CMDB operations
+
+**Note**: Disabling unused modules reduces memory usage and improves startup time.
+
 ## Usage
 
 ```bash
@@ -188,6 +215,8 @@ python src/atlassian_mcp_server/server.py
 ```
 
 ## MCP Client Configuration
+
+**Note**: All configuration examples below show the required environment variables. You can optionally add `"ATLASSIAN_MODULES": "jira,confluence,service_desk"` to any `env` section to control which modules are loaded.
 
 ### Claude Desktop
 
