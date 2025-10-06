@@ -389,8 +389,20 @@ class ServiceDeskClient(BaseAtlassianClient):  # pylint: disable=too-many-public
             ]
         }
 
-        response = await self.make_request("POST", url, json=data)
-        return response.json()
+        try:
+            response = await self.make_request("POST", url, json=data)
+            return response.json()
+        except Exception as e:
+            # Return debug info for troubleshooting
+            return {
+                "error": str(e),
+                "debug_info": {
+                    "url": url,
+                    "data": data,
+                    "workspace_id": workspace_id,
+                    "has_access_token": bool(self.config.access_token),
+                }
+            }
     async def assets_get_object_types(
         self, workspace_id: str
     ) -> List[Dict[str, Any]]:
