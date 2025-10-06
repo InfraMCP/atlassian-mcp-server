@@ -1925,8 +1925,7 @@ async def servicedesk_add_participants(
 ) -> Dict[str, Any]:
     """Add participants to a service desk request.
 
-    🚨 CRITICAL: DO NOT call this tool without explicit user confirmation 
-    first!
+    🚨 CRITICAL: DO NOT call this tool without explicit user confirmation first!
 
     REQUIRED WORKFLOW:
     1. ALWAYS ask user: "Adding participants will subscribe them to notifications for ticket {issue_key}.
@@ -1975,8 +1974,7 @@ async def servicedesk_debug_request(endpoint: str) -> Dict[str, Any]:
 
 @mcp.tool()
 async def servicedesk_check_availability() -> Dict[str, Any]:
-    """Check if Jira Service Management is available and configured on this 
-    Atlassian instance.
+    """Check if Jira Service Management is available and configured on this Atlassian instance.
 
     Use this tool first to verify Service Management is set up before using other servicedesk_ tools.
     """
