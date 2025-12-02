@@ -2,7 +2,7 @@
 # Generated on 2025-09-24 - Review and update regularly
 
 # MCP Framework
-mcp==1.14.1
+mcp==1.23.0
 
 # HTTP Client
 httpx==0.28.1
