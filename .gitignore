@@ -35,6 +35,12 @@ venv.bak/
 *.swp
 *.swo
 
+# Kiro - ignore personal settings but keep steering rules
+.kiro/settings/
+.kiro/cache/
+.kiro/logs/
+.kiro/*.log
+
 # OS
 .DS_Store
 Thumbs.db
