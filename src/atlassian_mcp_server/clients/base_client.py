@@ -7,6 +7,7 @@ import base64
 import hashlib
 import json
 import logging
+import os
 import secrets
 import threading
 import time
@@ -130,7 +131,8 @@ class BaseAtlassianClient:
 
     def start_callback_server(self):
         """Start the callback server"""
-        self.server = HTTPServer(("localhost", 8080), OAuthCallbackHandler)
+        callback_port = int(os.getenv("OAUTH_CALLBACK_PORT", "8080"))
+        self.server = HTTPServer(("127.0.0.1", callback_port), OAuthCallbackHandler)
         self.server.callback_received = False
         self.server.callback_data = None
 
@@ -149,6 +151,8 @@ class BaseAtlassianClient:
     async def seamless_oauth_flow(self, scopes: Optional[List[str]] = None):
         """Complete OAuth flow with automatic callback handling"""
         self.start_callback_server()
+        callback_port = int(os.getenv("OAUTH_CALLBACK_PORT", "8080"))
+        redirect_uri = f"http://localhost:{callback_port}/callback"
 
         try:
             code_verifier, code_challenge = self.generate_pkce()
@@ -182,7 +186,7 @@ class BaseAtlassianClient:
                 "audience": "api.atlassian.com",
                 "client_id": self.config.client_id,
                 "scope": " ".join(scopes),
-                "redirect_uri": "http://localhost:8080/callback",
+                "redirect_uri": redirect_uri,
                 "state": state,
                 "response_type": "code",
                 "prompt": "consent",
@@ -213,13 +217,19 @@ class BaseAtlassianClient:
                     f"OAuth error: {callback_data['error']}", "OAUTH_ERROR"
                 )
 
+            # Validate state parameter to prevent CSRF attacks
+            if callback_data.get("state") != state:
+                raise AtlassianError(
+                    "Invalid state parameter - possible CSRF attack", "INVALID_STATE"
+                )
+
             # Exchange code for tokens
             token_data = {
                 "grant_type": "authorization_code",
                 "client_id": self.config.client_id,
                 "client_secret": self.config.client_secret,
                 "code": callback_data["code"],
-                "redirect_uri": "http://localhost:8080/callback",
+                "redirect_uri": redirect_uri,
                 "code_verifier": code_verifier,
             }
 
@@ -245,7 +255,7 @@ class BaseAtlassianClient:
             self.stop_callback_server()
 
     def save_credentials(self):
-        """Save credentials to file"""
+        """Save credentials to file with restricted permissions (owner read/write only)."""
         credentials = {
             "site_url": self.config.site_url,
             "client_id": self.config.client_id,
@@ -255,6 +265,7 @@ class BaseAtlassianClient:
         }
         with open(self.credentials_file, "w", encoding="utf-8") as f:
             json.dump(credentials, f, indent=2)
+        self.credentials_file.chmod(0o600)
 
     def load_credentials(self) -> bool:
         """Load saved credentials"""
