@@ -10,19 +10,24 @@ from datetime import datetime
 from pathlib import Path
 
 
-def run_command(cmd):
-    """Run command and return output."""
+def run_command(cmd: list):
+    """Run command and return output.
+
+    Args:
+        cmd: Command as a list of strings (e.g. ["pip3", "show", "httpx"]).
+             Uses shell=False to prevent command injection.
+    """
     try:
-        result = subprocess.run(cmd, shell=True, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, shell=False, capture_output=True, text=True, check=True)
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
-        print(f"Error running command '{cmd}': {e}")
+        print(f"Error running command '{' '.join(cmd)}': {e}")
         return None
 
 
 def get_package_info(package_name):
     """Get detailed package information."""
-    cmd = f"pip3 show {package_name}"
+    cmd = ["pip3", "show", package_name]
     output = run_command(cmd)
     if not output:
         return None
@@ -37,7 +42,7 @@ def get_package_info(package_name):
 
 def get_dependency_tree():
     """Get full dependency tree."""
-    cmd = "pip3 list --format=json"
+    cmd = ["pip3", "list", "--format=json"]
     output = run_command(cmd)
     if not output:
         return []

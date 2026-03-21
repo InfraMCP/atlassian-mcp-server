@@ -55,7 +55,9 @@ async def test_service_management():
                 print(f"✅ Retrieved details for request {issue_key}")
 
                 # Test 3: Get request status
-                print(f"\n3️⃣ Testing servicedesk_get_request_status for {issue_key}...")
+                print(
+                    f"\n3️⃣ Testing servicedesk_get_request_status for {issue_key}..."
+                )
                 status = await client.servicedesk_get_request_status(issue_key)
                 print(
                     f"✅ Retrieved status: {status.get('status', {}).get('status', 'Unknown')}"

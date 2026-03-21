@@ -8,10 +8,15 @@ import sys
 from pathlib import Path
 
 
-def run_command(cmd, check=True):
-    """Run command and return result."""
-    print(f"Running: {cmd}")
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+def run_command(cmd: list, check=True):
+    """Run command and return result.
+
+    Args:
+        cmd: Command as a list of strings (e.g. ["pip3", "show", "httpx"]).
+             Uses shell=False to prevent command injection.
+    """
+    print(f"Running: {' '.join(cmd)}")
+    result = subprocess.run(cmd, shell=False, capture_output=True, text=True)
     if check and result.returncode != 0:
         print(f"Error: {result.stderr}")
         sys.exit(1)
@@ -21,18 +26,18 @@ def run_command(cmd, check=True):
 def main():
     """Update dependencies safely."""
     print("🔄 Updating dependencies safely...")
-    
+
     # Backup current requirements
     print("\n📋 Backing up current requirements...")
-    run_command("cp requirements.txt requirements.txt.backup")
-    
+    run_command(["cp", "requirements.txt", "requirements.txt.backup"])
+
     # Get latest versions
     print("\n🔍 Checking for updates...")
     core_packages = ["mcp", "httpx", "pydantic", "pydantic-settings"]
-    
+
     updates = []
     for package in core_packages:
-        result = run_command(f"pip3 show {package}", check=False)
+        result = run_command(["pip3", "show", package], check=False)
         if result.returncode == 0:
             # Get current version
             for line in result.stdout.split('\n'):

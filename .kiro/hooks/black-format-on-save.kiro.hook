@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Black Format on Save",
+  "description": "Runs black formatter on any Python file when saved, keeping code consistently formatted and CI-ready",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "**/*.py"
+    ]
+  },
+  "then": {
+    "type": "runCommand",
+    "command": "python -m black ${file}"
+  },
+  "workspaceFolderName": "atlassian-mcp-server",
+  "shortName": "black-format-on-save"
+}
